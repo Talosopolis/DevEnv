@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: talos-core
+  labels:
+    name: talos-core
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: talos-games
+  labels:
+    name: talos-games
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: talos-community
+  labels:
+    name: talos-community

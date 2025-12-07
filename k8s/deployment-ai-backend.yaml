@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-backend
+  namespace: talos-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-backend
+  template:
+    metadata:
+      labels:
+        app: ai-backend
+    spec:
+      serviceAccountName: talos-ai-sa # Workload Identity binding to be setup
+      containers:
+      - name: ai-backend
+        image: us-docker.pkg.dev/${PROJECT_ID}/talosopolis-repo/ai-backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: GCP_PROJECT
+          value: "${PROJECT_ID}"
+        - name: GEMINI_MODEL
+          value: "gemini-2.5-flash-001"
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-backend-service
+  namespace: talos-core
+spec:
+  selector:
+    app: ai-backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
