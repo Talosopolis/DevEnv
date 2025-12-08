@@ -39,27 +39,29 @@ type TeacherViewProps = {
   onDeleteNote: (id: string) => void;
   onUpdateConversation: (id: string, updatedConversation: Partial<Conversation>) => void;
   onDeleteConversation: (id: string) => void;
+  generatedCourse?: any; // New prop for AI generated structure
 };
 
-export function TeacherView({ 
-  lessonPlans, 
+export function TeacherView({
+  lessonPlans,
   notes,
-  conversations, 
-  onAdd, 
-  onUpdate, 
+  conversations,
+  onAdd,
+  onUpdate,
   onDelete,
   onAddNote,
   onUpdateNote,
   onDeleteNote,
-  onUpdateConversation, 
-  onDeleteConversation 
+  onUpdateConversation,
+  onDeleteConversation,
+  generatedCourse
 }: TeacherViewProps) {
   const [showForm, setShowForm] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showConversations, setShowConversations] = useState(false);
   const [editingPlan, setEditingPlan] = useState<LessonPlan | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<LessonPlan | null>(null);
-  const [recentlyDeleted, setRecentlyDeleted] = useState<{plan: LessonPlan, timeout: NodeJS.Timeout} | null>(null);
+  const [recentlyDeleted, setRecentlyDeleted] = useState<{ plan: LessonPlan, timeout: NodeJS.Timeout } | null>(null);
   const [extractedPlan, setExtractedPlan] = useState<Omit<LessonPlan, "id" | "createdAt"> | null>(null);
   const [addingNoteToLesson, setAddingNoteToLesson] = useState<LessonPlan | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
@@ -89,10 +91,10 @@ export function TeacherView({
         onDelete(planToDelete.id);
         setRecentlyDeleted(null);
       }, 5000); // 5 seconds to undo
-      
+
       setRecentlyDeleted({ plan: planToDelete, timeout });
       setDeletingPlan(null);
-      
+
       toast.success("Lesson deleted", {
         action: {
           label: "Undo",
@@ -130,7 +132,7 @@ export function TeacherView({
     if (!file) return;
 
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    
+
     if (fileExtension === 'txt' || fileExtension === 'md') {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -155,10 +157,10 @@ export function TeacherView({
     try {
       const pdfjsLib = await import('pdfjs-dist');
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
-      
+
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      
+
       let fullText = '';
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -168,7 +170,7 @@ export function TeacherView({
           .join(' ');
         fullText += pageText + '\n\n';
       }
-      
+
       setNoteContent(fullText.trim());
       if (!noteTitle) {
         setNoteTitle(file.name.replace(/\.[^/.]+$/, ""));
@@ -185,7 +187,7 @@ export function TeacherView({
       const mammoth = await import('mammoth');
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.extractRawText({ arrayBuffer });
-      
+
       setNoteContent(result.value);
       if (!noteTitle) {
         setNoteTitle(file.name.replace(/\.[^/.]+$/, ""));
@@ -199,7 +201,7 @@ export function TeacherView({
 
   const handleSubmitNote = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!noteTitle.trim() || !noteContent.trim() || !noteTeacherName.trim()) {
       toast.error("Please fill in all required fields");
       return;
@@ -274,7 +276,7 @@ export function TeacherView({
     );
   }
 
-  const unreadCount = conversations.filter(conv => 
+  const unreadCount = conversations.filter(conv =>
     conv.messages.some(msg => msg.role === "assistant" && !msg.editedByTeacher)
   ).length;
 
@@ -298,6 +300,35 @@ export function TeacherView({
               Upload File
             </Button>
           </div>
+
+          {/* Generated Course Preview */}
+          {generatedCourse && (
+            <div className="bg-slate-900 border border-cyan-500/30 rounded-lg p-5 mb-6 shadow-lg">
+              <div className="flex items-center gap-2 mb-3 text-cyan-400">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <h3 className="font-bold uppercase tracking-wider text-sm">Genesis Engine // Generated Curriculum</h3>
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">{generatedCourse.title}</h2>
+              <p className="text-slate-400 text-sm mb-4">{generatedCourse.description}</p>
+
+              <div className="space-y-3">
+                {generatedCourse.modules?.map((mod: any, i: number) => (
+                  <div key={i} className="bg-slate-800/50 rounded border border-slate-700 p-3">
+                    <h4 className="text-amber-400 font-bold text-sm mb-1">{mod.title}</h4>
+                    <p className="text-slate-500 text-xs mb-2">{mod.description}</p>
+                    <div className="pl-3 border-l-2 border-cyan-900 space-y-1">
+                      {mod.lessons?.map((lesson: any, j: number) => (
+                        <div key={j} className="text-xs text-slate-300 flex items-center gap-2">
+                          <span className="w-1 h-1 bg-cyan-500 rounded-full" />
+                          {lesson.title}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3 pb-4">
             {displayedLessonPlans.length === 0 ? (
@@ -338,7 +369,7 @@ export function TeacherView({
                         {plan.isPublic ? "Public" : "Private"}
                       </Badge>
                     </div>
-                    
+
                     {/* Show attached notes count */}
                     {notes.filter(note => note.lessonPlanId === plan.id).length > 0 && (
                       <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 p-2 rounded-md">
@@ -346,7 +377,7 @@ export function TeacherView({
                         <span>{notes.filter(note => note.lessonPlanId === plan.id).length} {notes.filter(note => note.lessonPlanId === plan.id).length === 1 ? 'note' : 'notes'} attached</span>
                       </div>
                     )}
-                    
+
                     <div className="grid grid-cols-3 gap-2">
                       <Button
                         variant="outline"
@@ -515,7 +546,7 @@ export function TeacherView({
           onAdd={onAddNote}
           onUpdate={onUpdateNote}
           onDelete={onDeleteNote}
-          onBack={() => {}}
+          onBack={() => { }}
         />
       </TabsContent>
 
@@ -530,7 +561,7 @@ export function TeacherView({
         <ConversationReview
           conversations={conversations}
           onUpdateConversation={onUpdateConversation}
-          onBack={() => {}}
+          onBack={() => { }}
         />
       </TabsContent>
 

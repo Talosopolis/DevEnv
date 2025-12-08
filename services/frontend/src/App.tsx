@@ -241,13 +241,14 @@ export default function App() {
   // Teacher Upload State
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [generatedCourse, setGeneratedCourse] = useState<any | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    setUploadStatus("Uploading to Talos Cloud...");
+    setUploadStatus("Uploading to Talos Cloud & Generating Curriculum...");
 
     const formData = new FormData();
     formData.append('file', file);
@@ -259,7 +260,30 @@ export default function App() {
         body: formData,
       });
       const data = await res.json();
-      setUploadStatus(`Success: ${data.message}`);
+      setUploadStatus(`Success: ${data.rag_status.message}`);
+
+      // Set the generated course for the TeacherView preview
+      if (data.course_structure) {
+        setGeneratedCourse(data.course_structure);
+      }
+
+      // Auto-add to lesson plans for Arcade visibility
+      const newPlan: LessonPlan = {
+        id: Date.now().toString(),
+        title: data.course_structure.title || "Generated Course",
+        subject: "AI Generated",
+        grade: "University",
+        description: data.course_structure.description || "No description",
+        objectives: ["Mastery of uploaded content"],
+        materials: ["Uploaded Document"],
+        activities: ["Adaptive Quiz"],
+        duration: "Self-paced",
+        teacherName: "Talos AI",
+        createdAt: new Date().toISOString().split('T')[0],
+        isPublic: true
+      };
+      setLessonPlans(prev => [newPlan, ...prev]);
+
       setTimeout(() => setUploadStatus(null), 3000);
     } catch (err) {
       console.error("Upload failed", err);
@@ -370,6 +394,7 @@ export default function App() {
               onDeleteNote={deleteNote}
               onUpdateConversation={updateConversation}
               onDeleteConversation={deleteConversation}
+              generatedCourse={generatedCourse}
             />
           </TabsContent>
           <TabsContent value="student" className="m-0 p-4">
