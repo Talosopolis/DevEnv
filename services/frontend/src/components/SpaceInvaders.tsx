@@ -60,7 +60,9 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
     const [gameState, setGameState] = useState<GameState>('menu')
     const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM')
     const [score, setScore] = useState(0)
+    const [displayScore, setDisplayScore] = useState(0)
     const scoreRef = useRef(0)
+    const seenQuestions = useRef<string[]>([])
     const [health, setHealth] = useState(100)
     const [questionsCorrect, setQuestionsCorrect] = useState(0)
     const [questionCount, setQuestionCount] = useState(0)
@@ -78,12 +80,23 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
     const bombs = useRef<Bomb[]>([])
     const enemies = useRef<Enemy[]>([])
     const particles = useRef<Particle[]>([])
+    const bgParticles = useRef<{ x: number, y: number, vy: number, color: string }[]>([]) // Background greebles
     const menuParticles = useRef<Particle[]>([]) // Distinct particles for menu
     const keys = useRef<{ [key: string]: boolean }>({})
     const lastShotTime = useRef(0)
     const requestId = useRef<number | undefined>(undefined)
     const shakeIntensity = useRef(0)
     const isTransitioning = useRef(false)
+
+    const bgWarp = useRef({
+        val: 0, target: 0,
+        color: '#1e293b', // Base Grid Color
+        bloom: 0,
+        flood: { color: '', opacity: 0 }, // Background Flood
+        type: 'NORMAL' as 'NORMAL' | 'PULSE' | 'GLITCH' | 'WARP',
+        direction: 1 // 1 or -1 for Twist Direction
+    })
+    const shieldFizzle = useRef(0)
 
     // Shield State
     const shieldEnergy = useRef(100)
@@ -168,11 +181,14 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                 body: JSON.stringify({
                     topic,
                     difficulty: currentDiff === 'STREAMER' ? 'spartan' : currentDiff.toLowerCase(),
-                    question_index: targetIndex
+                    question_index: targetIndex,
+                    previous_questions: seenQuestions.current
                 })
             })
             const data = await res.json()
-            setCurrentQuestion(data.question || "Error loading question.")
+            const qText = data.question || "Error loading question."
+            setCurrentQuestion(qText)
+            seenQuestions.current.push(qText)
 
             const config = (CONFIG as any)[currentDiff]
             let baseInitSpeed = config.enemySpeed
@@ -222,8 +238,10 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
         shieldEnergy.current = 100
         setQuestionsCorrect(0)
         setQuestionCount(0)
+        setQuestionCount(0)
         isTransitioning.current = false
         particles.current = [] // Clear FX
+        seenQuestions.current = [] // Clear History
 
         await loadNextQuestion(diff, 0)
 
@@ -247,6 +265,12 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
 
             if (e.code === 'KeyR') startGame(difficulty)
             if (e.code === 'KeyX') setAutoRestart(prev => !prev)
+            if (['KeyM', 'KeyP', 'Escape'].includes(e.code)) {
+                if (gameState !== 'menu') {
+                    bgWarp.current = { val: 0, target: 0, color: '#1e293b', bloom: 0, flood: { color: '', opacity: 0 }, type: 'NORMAL', direction: 1 }
+                    setGameState('menu')
+                }
+            }
 
             keys.current[e.code] = true
         }
@@ -262,11 +286,33 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
     // Auto Restart Loop
     useEffect(() => {
         let timeout: NodeJS.Timeout
-        if ((gameState === 'victory' || gameState === 'gameover') && autoRestart) {
+        if (gameState === 'gameover' && autoRestart) {
             timeout = setTimeout(() => startGame(difficulty), 3000)
         }
         return () => clearTimeout(timeout)
     }, [gameState, autoRestart, difficulty])
+
+    // Victory Counter Animation
+    useEffect(() => {
+        if (gameState === 'victory') {
+            let start = 0
+            const end = score
+            if (start === end) { setDisplayScore(end); return }
+            const duration = 2000
+            const startTime = Date.now()
+
+            const animate = () => {
+                const now = Date.now()
+                const progress = Math.min((now - startTime) / duration, 1)
+                const ease = 1 - Math.pow(1 - progress, 3) // Cubic ease out
+                setDisplayScore(Math.floor(start + (end - start) * ease))
+                if (progress < 1) requestAnimationFrame(animate)
+            }
+            requestAnimationFrame(animate)
+        } else {
+            setDisplayScore(0)
+        }
+    }, [gameState, score])
 
     // --- Game Loop ---
     useEffect(() => {
@@ -287,12 +333,117 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
             ctx.shadowColor = 'transparent'
             ctx.globalAlpha = 1
 
-            // 2. Clear Screen
+            if (gameState === 'menu') {
+                // Hard Reset Visuals in Menu to prevent leaks
+                bgWarp.current = { val: 0, target: 0, color: '#1e293b', bloom: 0, flood: { color: '', opacity: 0 }, type: 'NORMAL', direction: 1 }
+            }
+
+            // 2. Clear Screen & Dynamic Background
             ctx.fillStyle = '#020617'
             ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
-            ctx.strokeStyle = 'rgba(30, 41, 59, 0.5)'; ctx.lineWidth = 1
-            for (let i = 0; i < CANVAS_WIDTH; i += 50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_HEIGHT); ctx.stroke(); }
-            for (let i = 0; i < CANVAS_HEIGHT; i += 50) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(CANVAS_WIDTH, i); ctx.stroke(); }
+
+            // Background Greebles (Particle Fire)
+            if (!reducedMotion) {
+                if (bgParticles.current.length < 80) {
+                    const size = Math.random() * 20 + 2 // 2px to 22px
+                    bgParticles.current.push({
+                        x: Math.random() * CANVAS_WIDTH,
+                        y: CANVAS_HEIGHT + 20,
+                        vy: -2 - Math.random() * 4, // Fast rise
+                        color: Math.random() > 0.5 ? 'rgba(6, 182, 212, 0.15)' : 'rgba(148, 163, 184, 0.1)'
+                    })
+                }
+                for (let i = bgParticles.current.length - 1; i >= 0; i--) {
+                    const p = bgParticles.current[i]
+                    p.y += p.vy
+                    if (p.y < -30) { bgParticles.current.splice(i, 1); continue }
+                    ctx.fillStyle = p.color
+                    ctx.fillRect(p.x, p.y, (p as any).size || 4, (p as any).size || 4) // Fallback size logic
+                }
+            }
+
+            // Background Logic
+            if (!reducedMotion) {
+                // Decay & Transitions
+                // Slower Fade In/Out (0.02)
+                bgWarp.current.val += (bgWarp.current.target - bgWarp.current.val) * 0.02
+                if (Math.abs(bgWarp.current.target - bgWarp.current.val) < 0.01) bgWarp.current.target = 0
+                bgWarp.current.flood.opacity *= 0.92
+                bgWarp.current.bloom = Math.max(0, bgWarp.current.bloom * 0.9)
+                if (bgWarp.current.color !== '#1e293b' && bgWarp.current.bloom < 5) bgWarp.current.color = '#1e293b'
+
+                ctx.save()
+                const val = bgWarp.current.val
+
+                // 1. Flood Layer (Answers)
+                if (bgWarp.current.flood.opacity > 0.01) {
+                    ctx.fillStyle = bgWarp.current.flood.color
+                    ctx.globalAlpha = bgWarp.current.flood.opacity
+                    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+                    ctx.globalAlpha = 1
+                }
+
+                // 2. Grid Layer (Bloom & Flash)
+                const time = Date.now()
+                const restPulse = Math.sin(time * 0.002) * 0.5 + 0.5 // 0 to 1
+
+                // Enhanced Breathing
+                const breathWidth = restPulse * 3
+                const breathBloom = restPulse * 30
+
+                ctx.strokeStyle = bgWarp.current.color
+                ctx.lineWidth = 1 + val * 2 + (bgWarp.current.type === 'NORMAL' ? breathWidth : 0)
+                ctx.shadowBlur = 30 + bgWarp.current.bloom + (bgWarp.current.type === 'NORMAL' ? breathBloom : 0)
+                ctx.shadowColor = bgWarp.current.color
+
+                // Vertical Lines
+                for (let i = 0; i < CANVAS_WIDTH; i += 50) {
+                    ctx.beginPath()
+                    const startX = i
+                    ctx.moveTo(startX, 0)
+                    for (let j = 0; j < CANVAS_HEIGHT; j += 20) {
+                        let dx = 0
+                        // Jitter (Constant)
+                        dx += (Math.random() - 0.5) * 2
+
+                        // DNA / Twist Effect (Toned Down)
+                        if (isShielding.current) dx += Math.sin((j * 0.02) + (time * 0.005)) * 25
+
+                        if (bgWarp.current.type === 'PULSE') dx += Math.sin(j * 0.05 + time * 0.005) * val * 20
+                        if (bgWarp.current.type === 'GLITCH') dx += (Math.random() - 0.5) * val * 50
+                        if (bgWarp.current.type === 'WARP') dx += Math.sin(j * 0.02) * val * 100 * bgWarp.current.direction
+                        ctx.lineTo(startX + dx, j)
+                    }
+                    ctx.stroke()
+                }
+
+                // Horizontal Lines
+                for (let i = 0; i < CANVAS_HEIGHT; i += 50) {
+                    ctx.beginPath()
+                    ctx.moveTo(0, i)
+                    for (let j = 0; j < CANVAS_WIDTH; j += 20) {
+                        let dy = 0
+                        // Jitter (Constant)
+                        dy += (Math.random() - 0.5) * 2
+
+                        // DNA / Twist Effect (Toned Down)
+                        if (isShielding.current) dy += Math.cos((j * 0.02) + (time * 0.005)) * 15
+
+                        if (bgWarp.current.type === 'PULSE') dy += Math.cos(j * 0.05 + time * 0.005) * val * 20
+                        if (bgWarp.current.type === 'GLITCH') dy += (Math.random() - 0.5) * val * 50
+                        if (bgWarp.current.type === 'WARP') dy += Math.cos(j * 0.02) * val * 40 // Horizontal warp unaffected by direction for stability
+                        ctx.lineTo(j, i + dy)
+                    }
+                    ctx.stroke()
+                }
+                ctx.restore()
+            } else {
+                // Static Grid (Reduced Motion)
+                ctx.strokeStyle = 'rgba(30, 41, 59, 0.5)'; ctx.lineWidth = 1
+                ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'
+                for (let i = 0; i < CANVAS_WIDTH; i += 50) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, CANVAS_HEIGHT); ctx.stroke(); }
+                for (let i = 0; i < CANVAS_HEIGHT; i += 50) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(CANVAS_WIDTH, i); ctx.stroke(); }
+            }
 
             // 3. MENU RENDER
             if (gameState === 'menu') {
@@ -350,12 +501,40 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                 // Input
                 if ((keys.current['ShiftLeft'] || keys.current['ShiftRight']) && shieldEnergy.current > 0) {
                     isShielding.current = true; shieldEnergy.current = Math.max(0, shieldEnergy.current - SHIELD_DRAIN)
+                    if (!reducedMotion) {
+                        bgWarp.current = { ...bgWarp.current, val: 0.5, target: 1.0, type: 'WARP', color: '#22d3ee', bloom: 20 }
+                        // Rising Particles
+                        if (Math.random() > 0.5) {
+                            particles.current.push({
+                                x: playerX.current + (Math.random() - 0.5) * 120, y: CANVAS_HEIGHT,
+                                vx: 0, vy: -5 - Math.random() * 5, life: 1.0, color: '#22d3ee', type: 'SPARK'
+                            })
+                        }
+                    }
                 } else {
                     isShielding.current = false; shieldEnergy.current = Math.min(100, shieldEnergy.current + SHIELD_RECHARGE)
+                    if (!reducedMotion && bgWarp.current.type === 'WARP') { bgWarp.current.target = 0; bgWarp.current.bloom = 0; bgWarp.current.color = '#1e293b' }
                 }
+                if (shieldEnergy.current <= 0 && isShielding.current && !reducedMotion) {
+                    shieldFizzle.current = 20 // Trigger fizzle
+                }
+                if (shieldFizzle.current > 0) {
+                    shieldFizzle.current--
+                    if (Math.random() > 0.5) ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT) // Flicker
+                }
+
                 if (keys.current['ArrowLeft'] || keys.current['KeyA']) playerX.current -= PLAYER_SPEED
                 if (keys.current['ArrowRight'] || keys.current['KeyD']) playerX.current += PLAYER_SPEED
-                if (playerX.current < 0) playerX.current = CANVAS_WIDTH; if (playerX.current > CANVAS_WIDTH) playerX.current = 0
+
+                // Screen Wrap & Warp FX
+                if (playerX.current < 0) {
+                    playerX.current = CANVAS_WIDTH
+                    if (!reducedMotion) bgWarp.current = { ...bgWarp.current, target: 1.5, type: 'WARP', color: '#a855f7', bloom: 30, direction: 1 }
+                }
+                if (playerX.current > CANVAS_WIDTH) {
+                    playerX.current = 0
+                    if (!reducedMotion) bgWarp.current = { ...bgWarp.current, target: 1.5, type: 'WARP', color: '#a855f7', bloom: 30, direction: -1 }
+                }
 
                 // Fire
                 if (keys.current['Space'] && !isShielding.current && Date.now() - lastShotTime.current > 350) {
@@ -363,18 +542,22 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                         bullets.current.push({ x: playerX.current, y: CANVAS_HEIGHT - 50, active: true });
                         lastShotTime.current = Date.now()
                         setShotsRemaining(s => s - 1)
+                        if (!reducedMotion) { bgWarp.current = { ...bgWarp.current, val: 0.2, target: 0, type: 'PULSE', color: '#22d3ee', bloom: 40 } }
                     }
                 }
 
-                // Ammo
+                // Ammo Penalty
                 if (shotsRemaining <= 0 && bullets.current.filter(b => b.active).length === 0 && !isTransitioning.current) {
                     isTransitioning.current = true
                     setHealth(h => Math.max(0, h - 25)); // Penalty
-                    const penalty = 500
+                    const penalty = 200
                     scoreRef.current = Math.max(0, scoreRef.current - penalty)
                     setScore(scoreRef.current)
                     setFeedbackMessage(`AMMO DEPLETED! -${penalty} pts`)
                     shakeIntensity.current = 10
+                    // Red Flood
+                    if (!reducedMotion) { bgWarp.current = { ...bgWarp.current, val: 1.0, target: 0, type: 'GLITCH', flood: { color: '#ef4444', opacity: 0.6 }, color: '#ef4444', bloom: 60 } }
+
                     const nextQ = questionCount + 1
                     setQuestionCount(nextQ)
                     setTimeout(() => { loadNextQuestion(undefined, nextQ) }, 1200)
@@ -450,16 +633,33 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                         if (bullet.x > enemy.x && bullet.x < enemy.x + enemy.width && bullet.y > enemy.y && bullet.y < enemy.y + enemy.height) {
                             bullet.active = false; createExplosion(bullet.x, bullet.y, enemy.isCorrect ? '#22d3ee' : '#ef4444'); shakeIntensity.current = 5
                             if (enemy.isCorrect) {
-                                enemy.active = false; const points = 100 * diffConfig.scoreMult; scoreRef.current += points; setScore(scoreRef.current)
+                                enemy.active = false
+                                const points = 250 * diffConfig.scoreMult
+                                scoreRef.current += points
+                                setScore(scoreRef.current)
                                 const nextQ = questionCount + 1
-                                setQuestionsCorrect(q => q + 1);
-                                setQuestionCount(nextQ);
+                                setQuestionsCorrect(q => q + 1)
+                                setQuestionCount(nextQ)
                                 setFeedbackMessage(`TARGET NEUTRALIZED +${points}`)
-                                enemies.current.forEach(e => e.active = false);
-                                isTransitioning.current = true;
+                                enemies.current.forEach(e => e.active = false)
+                                isTransitioning.current = true
+                                // Green Flood
+                                if (!reducedMotion) {
+                                    bgWarp.current = {
+                                        ...bgWarp.current,
+                                        val: 1.0,
+                                        target: 0,
+                                        type: 'PULSE',
+                                        flood: { color: '#22c55e', opacity: 0.4 },
+                                        color: '#22c55e',
+                                        bloom: 50
+                                    }
+                                }
                                 loadNextQuestion(undefined, nextQ)
                             } else {
                                 setHealth(h => Math.max(0, h - 20)); setFeedbackMessage("INCORRECT TARGET! HULL DAMAGED"); shakeIntensity.current = 15
+                                scoreRef.current = Math.max(0, scoreRef.current - 50); setScore(scoreRef.current)
+                                if (!reducedMotion) { bgWarp.current = { ...bgWarp.current, val: 1.0, target: 0, type: 'GLITCH', flood: { color: '#ef4444', opacity: 0.5 }, color: '#ef4444', bloom: 50 } }
                             }
                         }
                     })
@@ -474,6 +674,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                         const hitColor = bomb.type === 'PIERCING' ? '#facc15' : bomb.type === 'TRACKING' ? '#f87171' : '#ef4444'
                         createExplosion(playerX.current, CANVAS_HEIGHT - 35, hitColor, 'GLITCH')
                         shakeIntensity.current = 20
+                        if (!reducedMotion) { bgWarp.current = { ...bgWarp.current, val: 1.5, target: 0, type: 'GLITCH', color: hitColor, bloom: 60 } }
                     }
                 })
 
@@ -483,7 +684,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                     ctx.shadowBlur = 15; ctx.shadowColor = '#22d3ee'; ctx.strokeStyle = '#22d3ee'; ctx.strokeRect(enemy.x, enemy.y, enemy.width, enemy.height)
                     ctx.shadowBlur = 0; ctx.fillStyle = 'rgba(34, 211, 238, 0.05)'; ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height)
                     ctx.fillStyle = '#e2e8f0'; ctx.font = '14px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
-                    wrapText(ctx, enemy.text, enemy.x + enemy.width / 2, enemy.y + 25, enemy.width - 20, 16)
+                    wrapText(ctx, enemy.text, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.width - 20, 16)
                 })
 
                 // RENDER PLAYER
@@ -549,7 +750,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                         </div>
                     </div>
                 </div>
-                <button onClick={onExit} className="hover:text-red-400">[ABORT MISSION]</button>
+                <button onClick={onExit} className="hover:text-red-400">[M / ESC] ABORT</button>
             </div>
 
             {/* Game Windows */}
@@ -588,6 +789,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                                         <div className="flex justify-between text-slate-400"><span>FIRE</span> <span className="text-white">SPACE (3 SHOTS/Q)</span></div>
                                         <div className="flex justify-between text-slate-400"><span>SHIELD</span> <span className="text-white">SHIFT</span></div>
                                         <div className="flex justify-between text-slate-400"><span>WARP</span> <span className="text-white">FLY OFF EDGE</span></div>
+                                        <div className="flex justify-between text-slate-400"><span>ABORT</span> <span className="text-white">M / ESC</span></div>
                                         <div className="flex justify-between text-slate-400"><span>RESTART</span> <span className="text-white">R</span></div>
                                     </div>
                                     <div className="space-y-4">
@@ -635,7 +837,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                                 <p className="text-slate-400 tracking-[0.5em] text-sm mb-8">TACTICAL KNOWLEDGE SYSTEM</p>
 
                                 {/* VERTICAL MENU STACK */}
-                                <div className="flex flex-col gap-4 w-full max-w-xl px-8 mb-8 z-20">
+                                <div className="flex flex-col gap-4 w-full max-w-md px-8 mb-8 z-20">
                                     {Object.entries(CONFIG).map(([key, conf]) => (
                                         <button
                                             key={key}
@@ -680,20 +882,35 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-20 backdrop-blur-md">
                             {gameState === 'victory' ? (
                                 <div className="text-center animate-in fade-in zoom-in duration-500">
-                                    <h1 className="text-6xl font-black text-green-500 mb-2 tracking-tighter">MISSION CLEAR</h1>
-                                    <p className="text-green-900 tracking-widest mb-8 text-xl">SECTOR SECURED</p>
+                                    <h1 className="text-6xl font-black text-green-500 mb-2 tracking-tighter drop-shadow-[0_0_25px_rgba(34,197,94,0.5)]">CONTRACT COMPLETE</h1>
+                                    <p className="text-green-900 tracking-widest mb-8 text-xl">PAYMENT SECURED</p>
+
+                                    <div className="flex flex-col items-center gap-2 mb-8">
+                                        <div className="text-xs text-green-400 tracking-[0.5em] uppercase">Transferring Lepta...</div>
+                                        <div className="text-5xl font-mono font-bold text-white tracking-widest tabular-nums">
+                                            {displayScore.toLocaleString()}
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="text-center animate-in fade-in zoom-in duration-500">
-                                    <h1 className="text-6xl font-black text-red-500 mb-2 tracking-tighter">CRITICAL FAILURE</h1>
-                                    <p className="text-red-900 tracking-widest mb-8 text-xl">HULL DESTROYED</p>
+                                    <h1 className="text-6xl font-black text-red-500 mb-2 tracking-tighter drop-shadow-[0_0_25px_rgba(239,68,68,0.5)]">CONTRACT TERMINATED</h1>
+                                    <p className="text-red-900 tracking-widest mb-8 text-xl">SIGNAL LOST</p>
+
+                                    <div className="flex flex-col items-center gap-2 mb-8 opacity-50">
+                                        <div className="text-xs text-red-900 tracking-[0.5em] uppercase line-through">Potential Earnings</div>
+                                        <div className="text-4xl font-mono font-bold text-red-900/50 tracking-widest tabular-nums line-through">
+                                            {score.toLocaleString()}
+                                        </div>
+                                        <div className="text-lg text-red-500 font-bold mt-2">0 LEPTA SECURED</div>
+                                    </div>
                                 </div>
                             )}
 
                             <div className="grid grid-cols-2 gap-8 mb-8 text-center">
                                 <div>
                                     <p className="text-slate-500 text-xs tracking-widest mb-1">FINAL SCORE (Λ)</p>
-                                    <p className="text-4xl text-white font-bold">{score}</p>
+                                    <p className="text-4xl text-white font-bold">{displayScore}</p>
                                 </div>
                                 <div>
                                     <p className="text-slate-500 text-xs tracking-widest mb-1">ACCURACY</p>
@@ -703,7 +920,10 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
 
                             <div className="flex flex-col gap-4 items-center">
                                 <div className="flex gap-4">
-                                    <button onClick={() => setGameState('menu')} className="px-8 py-3 bg-white text-black font-bold hover:bg-slate-200 transition-colors">
+                                    <button onClick={() => {
+                                        bgWarp.current = { val: 0, target: 0, color: '#1e293b', bloom: 0, flood: { color: '', opacity: 0 }, type: 'NORMAL', direction: 1 }
+                                        setGameState('menu')
+                                    }} className="px-8 py-3 bg-white text-black font-bold hover:bg-slate-200 transition-colors">
                                         MAIN MENU
                                     </button>
                                     <button onClick={onExit} className="px-8 py-3 border border-white/20 text-slate-400 hover:text-white hover:border-white transition-all">
