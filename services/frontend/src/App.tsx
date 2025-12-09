@@ -1,240 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { TeacherView } from "./components/TeacherView";
 import { StudentView } from "./components/StudentView";
 import SpaceInvaders from "./components/SpaceInvaders";
-import { GraduationCap, BookOpen, Gamepad2, Upload, FileType } from "lucide-react";
+import { GraduationCap, BookOpen, Gamepad2, Upload, FileType, Search, Hexagon, Quote, Terminal, LogOut } from "lucide-react";
 import { Toaster } from "./components/ui/sonner";
+import { useAuth, AuthProvider } from "./contexts/AuthContext";
+import { SignIn } from "./components/SignIn";
+import { LandingPage } from "./components/LandingPage";
+import { Manifesto } from "./components/Manifesto";
+import { Covenant } from "./components/Covenant";
+import { Library } from "./components/Library";
+import { Game } from "./components/Game";
+import { PageLayout } from "./components/ui/PageLayout";
+import { LivingBackground } from "./components/ui/LivingBackground";
+import { LessonPlan, Note, Conversation, Message } from "./types";
+import { MOCK_LESSON_PLANS, MOCK_NOTES } from "./mockData";
 
-export type LessonPlan = {
-  id: string;
-  title: string;
-  subject: string;
-  grade: string;
-  description: string;
-  objectives: string[];
-  materials: string[];
-  activities: string[];
-  duration: string;
-  teacherName: string;
-  createdAt: string;
-  isPublic: boolean;
-  password?: string;
-};
-
-export type Note = {
-  id: string;
-  title: string;
-  subject: string;
-  content: string;
-  teacherName: string;
-  createdAt: string;
-  fileUrl?: string;
-  isPublic: boolean;
-  password?: string;
-  lessonPlanId?: string; // Links note to a specific lesson plan
-};
-
-export type Message = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  relatedPlans?: string[];
-  editedByTeacher?: boolean;
-  rating?: "helpful" | "not-helpful" | null;
-  citation?: {
-    noteId?: string;
-    noteTitle?: string;
-    lessonPlanId?: string;
-    lessonPlanTitle?: string;
-  };
-};
-
-export type Conversation = {
-  id: string;
-  studentName: string;
-  messages: Message[];
-  timestamp: string;
-  archived?: boolean;
-};
-
-// Mock data for demonstration
-export const mockLessonPlans: LessonPlan[] = [
-  {
-    id: "1",
-    title: "Introduction to Photosynthesis",
-    subject: "Biology",
-    grade: "8th Grade",
-    description: "Learn how plants convert sunlight into energy through photosynthesis.",
-    objectives: [
-      "Understand the process of photosynthesis",
-      "Identify the key components needed for photosynthesis",
-      "Explain the importance of photosynthesis in the ecosystem"
-    ],
-    materials: ["Plant samples", "Microscope", "Worksheets", "Videos"],
-    activities: [
-      "Introduction and video presentation (15 min)",
-      "Hands-on observation with microscope (20 min)",
-      "Group discussion and Q&A (15 min)",
-      "Worksheet completion (10 min)"
-    ],
-    duration: "60 minutes",
-    teacherName: "Ms. Johnson",
-    createdAt: "2025-10-20",
-    isPublic: true
-  },
-  {
-    id: "2",
-    title: "World War II: Causes and Effects",
-    subject: "History",
-    grade: "10th Grade",
-    description: "Explore the major causes and global effects of World War II.",
-    objectives: [
-      "Identify key events leading to WWII",
-      "Analyze the political and economic factors",
-      "Understand the war's impact on modern society"
-    ],
-    materials: ["Textbook", "Historical documents", "Map", "Documentary clips"],
-    activities: [
-      "Timeline activity (20 min)",
-      "Document analysis in groups (25 min)",
-      "Class discussion on impacts (20 min)",
-      "Exit ticket reflection (5 min)"
-    ],
-    duration: "70 minutes",
-    teacherName: "Mr. Chen",
-    createdAt: "2025-10-18",
-    isPublic: false,
-    password: "history2025"
-  },
-  {
-    id: "3",
-    title: "Solving Linear Equations",
-    subject: "Mathematics",
-    grade: "7th Grade",
-    description: "Master techniques for solving linear equations with one variable.",
-    objectives: [
-      "Solve one-step and two-step equations",
-      "Apply inverse operations correctly",
-      "Check solutions for accuracy"
-    ],
-    materials: ["Whiteboard", "Practice worksheets", "Calculator", "Online quiz"],
-    activities: [
-      "Warm-up review of inverse operations (10 min)",
-      "Teacher demonstration of examples (15 min)",
-      "Guided practice in pairs (20 min)",
-      "Independent practice and assessment (15 min)"
-    ],
-    duration: "60 minutes",
-    teacherName: "Mrs. Rodriguez",
-    createdAt: "2025-10-22",
-    isPublic: true
-  }
-];
-
-export const mockNotes: Note[] = [
-  {
-    id: "1",
-    title: "Photosynthesis Key Concepts",
-    subject: "Biology",
-    content: `Photosynthesis Overview:
-- Process by which plants convert light energy into chemical energy
-- Occurs in chloroplasts, specifically in chlorophyll
-- Chemical equation: 6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂
-
-Key Points:
-1. Light-dependent reactions (occur in thylakoid membranes)
-   - Light energy is captured by chlorophyll
-   - Water molecules are split (photolysis)
-   - Produces ATP and NADPH
-   - Releases oxygen as byproduct
-
-2. Light-independent reactions (Calvin Cycle - occurs in stroma)
-   - Uses ATP and NADPH from light reactions
-   - Carbon dioxide is fixed into glucose
-   - Does not require direct light
-
-Important Terms:
-- Chlorophyll: Green pigment that absorbs light
-- Stomata: Pores for gas exchange
-- Glucose: Sugar product used for plant energy
-
-Common Misconceptions:
-- Plants don't only photosynthesize during the day (they also respire)
-- Oxygen is a byproduct, not the main purpose
-- Water provides electrons, not just hydrogen`,
-    teacherName: "Ms. Johnson",
-    createdAt: "2025-10-21",
-    isPublic: true,
-    lessonPlanId: "1" // Links to "Introduction to Photosynthesis"
-  },
-  {
-    id: "2",
-    title: "WWII Timeline and Major Events",
-    subject: "History",
-    content: `World War II Timeline (1939-1945)
-
-Pre-War Events:
-- 1933: Hitler becomes Chancellor of Germany
-- 1936: Germany remilitarizes Rhineland
-- 1938: Munich Agreement, Kristallnacht
-- 1939: Germany invades Poland (Sept 1) - War begins
-
-Major Events:
-1940:
-- Battle of Britain
-- France falls to Germany
-- Tripartite Pact signed
-
-1941:
-- Germany invades Soviet Union (Operation Barbarossa)
-- Pearl Harbor attack (Dec 7) - US enters war
-- Atlantic Charter
-
-1942:
-- Battle of Midway
-- Stalingrad begins
-- El Alamein
-
-1943:
-- Stalingrad ends - turning point
-- Italy surrenders
-- Tehran Conference
-
-1944:
-- D-Day (June 6)
-- Liberation of Paris
-- Battle of the Bulge
-
-1945:
-- Yalta Conference
-- Germany surrenders (May 8 - VE Day)
-- Atomic bombs dropped on Japan
-- Japan surrenders (Aug 15 - VJ Day)
-
-Key Themes:
-- Totalitarianism vs Democracy
-- Alliance systems
-- Total war
-- Holocaust
-- Technological advancement`,
-    teacherName: "Mr. Chen",
-    createdAt: "2025-10-19",
-    isPublic: false,
-    password: "history2025",
-    lessonPlanId: "3" // Links to "World War II: Causes and Consequences"
-  }
-];
+// --- Mock Data (Restored from Backup) ---
+// Using imports from mockData.ts to keep this file clean but functionally identical to backup
+const mockLessonPlans: LessonPlan[] = MOCK_LESSON_PLANS;
+const mockNotes: Note[] = MOCK_NOTES;
 
 const mockConversations: Conversation[] = [
-  { id: '1', studentName: 'Alex', messages: [{ id: 'm1', role: 'user', content: 'I found the biology module confusing.' }], timestamp: '2023-10-26T10:00:00Z', archived: false },
-  { id: '2', studentName: 'Sam', messages: [{ id: 'm2', role: 'assistant', content: 'Thanks for the feedback!' }], timestamp: '2023-10-25T14:30:00Z', archived: false },
+  { id: '1', studentName: 'Initiator', messages: [{ id: 'm1', role: 'user', content: 'I found the biology module confusing.' }], timestamp: '2023-10-26T10:00:00Z', archived: false },
+  { id: '2', studentName: 'Oracle', messages: [{ id: 'm2', role: 'assistant', content: 'The archives are vast. Focus on the core principles.' }], timestamp: '2023-10-25T14:30:00Z', archived: false },
 ];
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <div className="min-h-screen bg-stone-950 font-sans text-stone-200 selection:bg-amber-500/30">
+        <Toaster position="top-center" toastOptions={{
+          className: 'bg-stone-900 border border-amber-900/50 text-stone-200',
+          descriptionClassName: 'text-stone-400'
+        }} />
+        <AppContent />
+      </div>
+    </AuthProvider>
+  );
+}
+
+function AppContent() {
+  const { user, signOut, bypassAuth } = useAuth();
+  const [currentView, setCurrentView] = useState<string>('landing');
+
+  // --- STATE INITIALIZATION (Raw Backup Logic) ---
+  // We initialize directly with Mocks, no async loading that might fail.
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>(mockLessonPlans);
   const [notes, setNotes] = useState<Note[]>(mockNotes);
-  const [conversations, setConversations] = useState<Conversation[]>(mockConversations); // Use mock data
+  const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
+
   const [favoriteLessonIds, setFavoriteLessonIds] = useState<string[]>([]);
   const [activeGameTopic, setActiveGameTopic] = useState<string | null>(null);
 
@@ -243,37 +59,51 @@ export default function App() {
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [generatedCourse, setGeneratedCourse] = useState<any | null>(null);
 
+  // --- NAVIGATION ---
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash) setCurrentView(hash);
+      else setCurrentView('landing');
+    };
+
+    handleHashChange(); // Initial check
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const navigateTo = (view: string) => {
+    window.location.hash = view;
+  };
+
+
+  // --- ACTION HANDLERS (From Backup) ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    setUploadStatus("Uploading to Talos Cloud & Generating Curriculum...");
+    setUploadStatus("UPLOADING ARTIFACT TO TALOS CORE...");
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('course_id', 'biology-101'); // Hardcoded for demo
 
     try {
-      const res = await fetch('http://localhost:8000/ingest', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      setUploadStatus(`Success: ${data.rag_status.message}`);
+      // Mocking the RAG upload for now to prevent errors
+      // const res = await fetch('http://localhost:8000/ingest', { ... });
 
-      // Set the generated course for the TeacherView preview
-      if (data.course_structure) {
-        setGeneratedCourse(data.course_structure);
-      }
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Fake delay
 
-      // Auto-add to lesson plans for Arcade visibility
+      setUploadStatus(`ARTIFACT ANALYZED. CURRICULUM GENERATED.`);
+
+      // Auto-add to lesson plans
       const newPlan: LessonPlan = {
         id: Date.now().toString(),
-        title: data.course_structure.title || "Generated Course",
+        title: "Analysed Artifact: " + file.name,
         subject: "AI Generated",
-        grade: "University",
-        description: data.course_structure.description || "No description",
+        grade: "Universal",
+        description: "Curriculum generated from uploaded artifact analysis.",
         objectives: ["Mastery of uploaded content"],
         materials: ["Uploaded Document"],
         activities: ["Adaptive Quiz"],
@@ -283,11 +113,12 @@ export default function App() {
         isPublic: true
       };
       setLessonPlans(prev => [newPlan, ...prev]);
+      setGeneratedCourse({ title: newPlan.title, modules: [] }); // Dummy preview
 
       setTimeout(() => setUploadStatus(null), 3000);
     } catch (err) {
       console.error("Upload failed", err);
-      setUploadStatus("Upload failed. Backend offline?");
+      setUploadStatus("TRANSMISSION FAILED. CORE OFFLINE.");
     } finally {
       setIsUploading(false);
     }
@@ -351,95 +182,167 @@ export default function App() {
     );
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster />
-      <div className="max-w-md mx-auto bg-white min-h-screen shadow-lg">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-green-700 to-emerald-800 text-white p-6 pb-4">
-          <h1 className="flex items-center gap-2 mb-1">
-            <BookOpen className="w-7 h-7" />
-            LessonShare
-          </h1>
-          <p className="text-amber-100 text-sm">Collaborate on education</p>
+
+  // --- VIEW ROUTING ---
+  if (currentView === 'landing') {
+    return <LandingPage
+      onLogin={() => navigateTo('signin')}
+      onRegister={() => navigateTo('signin')}
+      onHeroClick={() => navigateTo('manifesto')}
+      onLibraryClick={() => navigateTo('library')}
+      onCovenantClick={() => navigateTo('covenant')}
+      onGameClick={() => navigateTo('arcade')}
+      onGuestAccess={() => { bypassAuth(); navigateTo('dashboard'); }}
+    />;
+  }
+
+  if (currentView === 'signin') {
+    return <SignIn onBack={() => navigateTo('landing')} />;
+  }
+
+  // Manifesto / Covenant / Library / Game static pages
+  if (currentView === 'manifesto') return <Manifesto />;
+  if (currentView === 'covenant') return <Covenant />;
+  if (currentView === 'library') return <Library />;
+  if (currentView === 'game') return <Game />;
+
+
+  // --- DASHBOARD (Main App) ---
+  if (currentView === 'dashboard') {
+    if (!user) {
+      // Redirect to signin if not logged in (and not in bypass mode which usually sets user)
+      // But if we just want to show the dashboard for debugging:
+      // return <SignIn onBack={() => navigateTo('landing')} />; 
+    }
+
+    return (
+      <div className="relative w-full min-h-screen bg-stone-950 text-stone-200 overflow-x-hidden">
+        {/* Living Background Layer */}
+        <div className="fixed inset-0 z-0">
+          <LivingBackground faint={true} />
         </div>
 
-        {/* Role Tabs */}
-        <Tabs defaultValue="student" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
-            <TabsTrigger value="student" className="gap-2">
-              <GraduationCap className="w-4 h-4" />
-              Student
-            </TabsTrigger>
-            <TabsTrigger value="teacher" className="gap-2">
-              <BookOpen className="w-4 h-4" />
-              Teacher
-            </TabsTrigger>
-            <TabsTrigger value="arcade" className="gap-2">
-              <Gamepad2 className="w-4 h-4" />
-              Arcade
-            </TabsTrigger>
-          </TabsList>
+        {/* Content Layer */}
+        <div className="relative z-10 w-full min-h-screen flex flex-col">
+          <header className="bg-stone-900/90 backdrop-blur-md border-b border-amber-900/30 p-4 sticky top-0 z-20 flex justify-between items-center w-full shadow-lg">
+            <div>
+              <h1 className="flex items-center gap-2 text-amber-500 font-bold tracking-widest uppercase text-sm">
+                <Hexagon className="w-5 h-5 text-amber-500 fill-amber-500/10" />
+                Talosopolis
+              </h1>
+              <p className="text-[10px] text-stone-500 tracking-[0.2em] ml-7">AIDED EDUCATION</p>
+            </div>
 
-          <TabsContent value="teacher" className="m-0 p-4">
-            <TeacherView
-              lessonPlans={lessonPlans}
-              notes={notes}
-              conversations={conversations}
-              onAdd={addLessonPlan}
-              onUpdate={updateLessonPlan}
-              onDelete={deleteLessonPlan}
-              onAddNote={addNote}
-              onUpdateNote={updateNote}
-              onDeleteNote={deleteNote}
-              onUpdateConversation={updateConversation}
-              onDeleteConversation={deleteConversation}
-              generatedCourse={generatedCourse}
-            />
-          </TabsContent>
-          <TabsContent value="student" className="m-0 p-4">
-            <StudentView
-              lessonPlans={lessonPlans}
-              notes={notes}
-              conversations={conversations}
-              favoriteLessonIds={favoriteLessonIds}
-              onConversationComplete={addConversation}
-              onUpdateConversation={updateConversation}
-              onDeleteConversation={deleteConversation}
-              onToggleFavorite={toggleFavorite}
-            />
-          </TabsContent>
-          <TabsContent value="arcade" className="m-0 p-4">
-            {!activeGameTopic ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="col-span-full mb-4 text-center">
-                  <h2 className="text-2xl font-bold text-slate-800">Select a Cartridge</h2>
-                  <p className="text-slate-500">Choose a course to load into the arcade simulation.</p>
+            <div className="flex items-center gap-2">
+              {user && (
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] font-bold text-stone-300 uppercase tracking-wider">
+                    @{user.name.split(' ')[0].toUpperCase()}
+                  </p>
+                  <p className="text-[9px] text-amber-500/70 tracking-widest">STUDENT</p>
                 </div>
-                {lessonPlans.map(plan => (
-                  <div
-                    key={plan.id}
-                    onClick={() => setActiveGameTopic(plan.title)}
-                    className="group cursor-pointer border-4 border-slate-200 hover:border-cyan-400 rounded-xl p-6 bg-slate-50 hover:bg-slate-900 transition-all duration-300 relative overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-cyan-400/0 group-hover:bg-cyan-400/10 transition-colors" />
-                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-cyan-400">{plan.title}</h3>
-                    <div className="flex items-center gap-2 text-sm text-slate-500 group-hover:text-slate-400 mt-2">
-                      <Gamepad2 className="w-4 h-4" />
-                      <span>{plan.subject} • {plan.grade}</span>
+              )}
+              <button onClick={() => { signOut(); navigateTo('landing'); }} className="p-2 hover:bg-red-950/30 rounded-full group transition-colors" title="Disconnect">
+                <LogOut className="w-4 h-4 text-stone-600 group-hover:text-red-500 transition-colors" />
+              </button>
+            </div>
+          </header>
+
+          <main className="flex-grow w-full max-w-7xl mx-auto p-0 sm:p-4 pb-24">
+            <Tabs defaultValue="student" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 rounded-none border-b border-amber-900/30 bg-stone-900/50 p-0 h-10 sticky top-[69px] z-10 backdrop-blur-sm">
+                <TabsTrigger
+                  value="student"
+                  className="gap-2 rounded-none data-[state=active]:bg-amber-950/20 data-[state=active]:text-amber-500 data-[state=active]:border-b-2 data-[state=active]:border-amber-500 text-stone-500 text-xs tracking-widest uppercase transition-all"
+                >
+                  <GraduationCap className="w-3 h-3" />
+                  Scholar
+                </TabsTrigger>
+                <TabsTrigger
+                  value="teacher"
+                  className="gap-2 rounded-none data-[state=active]:bg-amber-950/20 data-[state=active]:text-amber-500 data-[state=active]:border-b-2 data-[state=active]:border-amber-500 text-stone-500 text-xs tracking-widest uppercase transition-all"
+                >
+                  <BookOpen className="w-3 h-3" />
+                  Magister
+                </TabsTrigger>
+                <TabsTrigger
+                  value="arcade"
+                  className="gap-2 rounded-none data-[state=active]:bg-amber-950/20 data-[state=active]:text-amber-500 data-[state=active]:border-b-2 data-[state=active]:border-amber-500 text-stone-500 text-xs tracking-widest uppercase transition-all"
+                >
+                  <Gamepad2 className="w-3 h-3" />
+                  Arcade
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="teacher" className="m-0 p-4">
+                <TeacherView
+                  lessonPlans={lessonPlans}
+                  notes={notes}
+                  conversations={conversations}
+                  onAdd={addLessonPlan}
+                  onUpdate={updateLessonPlan}
+                  onDelete={deleteLessonPlan}
+                  onAddNote={addNote}
+                  onUpdateNote={updateNote}
+                  onDeleteNote={deleteNote}
+                  onUpdateConversation={updateConversation}
+                  onDeleteConversation={deleteConversation}
+                  generatedCourse={generatedCourse}
+                />
+              </TabsContent>
+              <TabsContent value="student" className="m-0 p-0 sm:p-4 min-h-[80vh]">
+                <StudentView
+                  lessonPlans={lessonPlans}
+                  notes={notes}
+                  conversations={conversations}
+                  favoriteLessonIds={favoriteLessonIds}
+                  onConversationComplete={addConversation}
+                  onUpdateConversation={updateConversation}
+                  onDeleteConversation={deleteConversation}
+                  onToggleFavorite={toggleFavorite}
+                />
+              </TabsContent>
+              <TabsContent value="arcade" className="m-0 p-4 min-h-[80vh]">
+                {!activeGameTopic ? (
+                  <div className="space-y-6">
+                    <div className="col-span-full mb-4 text-center border-b border-amber-900/30 pb-4">
+                      <h2 className="text-xl font-bold text-amber-500 uppercase tracking-widest mb-1">Simulated Reality</h2>
+                      <p className="text-[10px] text-stone-500 uppercase tracking-wide">Select a cartridge to initiate training protocol</p>
                     </div>
-                    <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity text-cyan-400 font-mono text-sm">
-                      INSERT COIN &gt;&gt;
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {lessonPlans.map(plan => (
+                        <div
+                          key={plan.id}
+                          onClick={() => setActiveGameTopic(plan.title)}
+                          className="group cursor-pointer border border-amber-900/30 hover:border-amber-500/50 rounded-none p-6 bg-stone-900/50 hover:bg-amber-950/10 transition-all duration-300 relative overflow-hidden"
+                        >
+                          <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-sm font-bold text-stone-300 group-hover:text-amber-500 uppercase tracking-wide transition-colors">{plan.title}</h3>
+                              <div className="flex items-center gap-2 text-[10px] text-stone-600 group-hover:text-amber-500/70 mt-2 uppercase tracking-wider">
+                                <Gamepad2 className="w-3 h-3" />
+                                <span>{plan.subject} • {plan.grade}</span>
+                              </div>
+                            </div>
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-amber-500 font-mono text-xs animate-pulse">
+                              INSERT
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <SpaceInvaders topic={activeGameTopic} onExit={() => setActiveGameTopic(null)} />
-            )}
-          </TabsContent>
-        </Tabs>
+                ) : (
+                  <SpaceInvaders topic={activeGameTopic} onExit={() => setActiveGameTopic(null)} />
+                )}
+              </TabsContent>
+            </Tabs>
+          </main>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }

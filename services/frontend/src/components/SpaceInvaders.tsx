@@ -261,6 +261,9 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
     // --- Input ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // IGNORE INPUTS: Don't hijack keys if user is typing in a form
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
+
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault()
 
             if (e.code === 'KeyR') startGame(difficulty)
@@ -754,7 +757,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
             </div>
 
             {/* Game Windows */}
-            <div className="relative w-[800px] h-[600px] border-2 border-slate-700 bg-black rounded-xl overflow-hidden shadow-[0_0_50px_rgba(34,211,238,0.1)]">
+            <div className="relative w-full max-w-[800px] aspect-[4/3] border-2 border-slate-700 bg-black rounded-xl overflow-hidden shadow-[0_0_50px_rgba(34,211,238,0.1)] box-border mx-auto">
 
                 {/* MENU STATE */}
                 {gameState === 'menu' && (
@@ -939,7 +942,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                     )
                 }
 
-                <canvas ref={canvasRef} width={800} height={600} className="block" />
+                <canvas ref={canvasRef} width={800} height={600} className="block w-full h-full" />
 
                 {/* CRT Overlay Effects */}
                 <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-10 bg-[length:100%_2px,3px_100%] opacity-20" />

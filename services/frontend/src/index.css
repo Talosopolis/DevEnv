@@ -2,6 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .animate-breathe {
+    animation: breathe 6s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 4s ease-in-out infinite;
+  }
+
+  .animate-float {
+    animation: float 10s ease-in-out infinite;
+  }
+}
+
+@keyframes breathe {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.02);
+    opacity: 0.9;
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(217, 119, 6, 0.1);
+    border-color: rgba(120, 113, 108, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.3);
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+
 @layer base {
   :root {
     --background: 222.2 84% 4.9%;

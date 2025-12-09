@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { LessonPlan, Conversation, Note } from "../App";
+import { useState, useRef } from "react";
+import { LessonPlan, Note, Conversation } from "../types";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -15,7 +15,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Switch } from "./ui/switch";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -287,39 +287,45 @@ export function TeacherView({
   });
 
   return (
-    <Tabs defaultValue="lessons" className="w-full">
+    <Tabs defaultValue="lessons" className="w-full font-serif">
       <TabsContent value="lessons" className="m-0 pb-20">
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="grid grid-cols-2 gap-2">
-            <Button onClick={() => setShowForm(true)} className="w-full">
+            <Button onClick={() => setShowForm(true)} className="w-full bg-amber-600 hover:bg-amber-700 text-stone-950 font-bold rounded-none uppercase tracking-widest shadow-[0_2px_10px_rgba(217,119,6,0.2)]">
               <Plus className="w-4 h-4 mr-2" />
-              Create New
+              New Archive
             </Button>
-            <Button onClick={() => setShowUpload(true)} variant="outline" className="w-full">
+            <Button onClick={() => setShowUpload(true)} variant="outline" className="w-full border-stone-700 text-stone-400 hover:bg-stone-800 hover:text-stone-200 rounded-none uppercase tracking-widest">
               <Upload className="w-4 h-4 mr-2" />
-              Upload File
+              Ingest Data
             </Button>
           </div>
 
           {/* Generated Course Preview */}
           {generatedCourse && (
-            <div className="bg-slate-900 border border-cyan-500/30 rounded-lg p-5 mb-6 shadow-lg">
-              <div className="flex items-center gap-2 mb-3 text-cyan-400">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <h3 className="font-bold uppercase tracking-wider text-sm">Genesis Engine // Generated Curriculum</h3>
-              </div>
-              <h2 className="text-xl font-bold text-white mb-2">{generatedCourse.title}</h2>
-              <p className="text-slate-400 text-sm mb-4">{generatedCourse.description}</p>
+            <div className="bg-stone-900 border border-amber-500/30 rounded-none p-6 shadow-lg relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all duration-1000" />
 
-              <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-4 text-amber-500 border-b border-amber-900/30 pb-2">
+                <div className="w-2 h-2 bg-amber-500 rounded-none rotate-45 animate-pulse" />
+                <h3 className="font-bold uppercase tracking-widest text-xs">Genesis Engine // Output Stream</h3>
+              </div>
+
+              <h2 className="text-xl font-bold text-stone-200 mb-2 uppercase tracking-wide">{generatedCourse.title}</h2>
+              <p className="text-stone-500 text-sm mb-6 font-mono border-l-2 border-stone-800 pl-3">{generatedCourse.description}</p>
+
+              <div className="space-y-4">
                 {generatedCourse.modules?.map((mod: any, i: number) => (
-                  <div key={i} className="bg-slate-800/50 rounded border border-slate-700 p-3">
-                    <h4 className="text-amber-400 font-bold text-sm mb-1">{mod.title}</h4>
-                    <p className="text-slate-500 text-xs mb-2">{mod.description}</p>
-                    <div className="pl-3 border-l-2 border-cyan-900 space-y-1">
+                  <div key={i} className="bg-stone-950/50 rounded-none border border-stone-800 p-4 hover:border-amber-900/50 transition-colors">
+                    <h4 className="text-amber-600 font-bold text-sm mb-2 uppercase tracking-wide flex items-center gap-2">
+                      <span className="text-stone-700 text-[10px]">0{i + 1}</span>
+                      {mod.title}
+                    </h4>
+                    <p className="text-stone-500 text-xs mb-3 indent-4">{mod.description}</p>
+                    <div className="pl-3 border-l border-amber-900/30 space-y-2">
                       {mod.lessons?.map((lesson: any, j: number) => (
-                        <div key={j} className="text-xs text-slate-300 flex items-center gap-2">
-                          <span className="w-1 h-1 bg-cyan-500 rounded-full" />
+                        <div key={j} className="text-xs text-stone-400 flex items-center gap-2 font-mono">
+                          <span className="w-1 h-1 bg-stone-700 rotate-45" />
                           {lesson.title}
                         </div>
                       ))}
@@ -330,79 +336,81 @@ export function TeacherView({
             </div>
           )}
 
-          <div className="space-y-3 pb-4">
+          <div className="space-y-4 pb-4">
             {displayedLessonPlans.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p className="mb-2">No lesson plans yet</p>
-                <p className="text-sm">Create your first lesson plan to get started</p>
+              <div className="text-center py-20 text-stone-600 border border-dashed border-stone-800 bg-stone-900/20">
+                <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <p className="uppercase tracking-widest text-xs mb-2">Archive Empty</p>
+                <p className="text-[10px] text-stone-700">Initialize a new record to begin</p>
               </div>
             ) : (
               displayedLessonPlans.map(plan => (
-                <Card key={plan.id}>
-                  <CardHeader className="pb-3">
+                <Card key={plan.id} className="bg-stone-900 border-amber-900/20 rounded-none group hover:border-amber-500/30 transition-all">
+                  <CardHeader className="pb-3 border-b border-stone-800">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1">
+                      <div className="flex items-center gap-3 flex-1">
                         {plan.isPublic ? (
-                          <Globe className="w-4 h-4 text-green-600 shrink-0" />
+                          <Globe className="w-4 h-4 text-amber-600 shrink-0" />
                         ) : (
-                          <Lock className="w-4 h-4 text-gray-400 shrink-0" />
+                          <Lock className="w-4 h-4 text-stone-500 shrink-0" />
                         )}
-                        <CardTitle className="text-base">{plan.title}</CardTitle>
+                        <CardTitle className="text-base text-stone-200 group-hover:text-amber-500 transition-colors uppercase tracking-wide font-bold">{plan.title}</CardTitle>
                       </div>
-                      <Badge className={`shrink-0 ${getSubjectColor(plan.subject)}`}>{plan.subject}</Badge>
+                      <Badge className={`rounded-none uppercase tracking-widest text-[10px] bg-stone-800 text-stone-400 border border-stone-700`}>{plan.subject}</Badge>
                     </div>
-                    <CardDescription className="line-clamp-2">{plan.description}</CardDescription>
+                    <CardDescription className="line-clamp-2 text-stone-500 text-xs font-sans mt-2">{plan.description}</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
+                  <CardContent className="space-y-4 pt-4">
+                    <div className="flex items-center gap-4 text-xs text-stone-500 uppercase tracking-wider font-bold">
+                      <div className="flex items-center gap-1.5">
+                        <User className="w-3 h-3 text-amber-700" />
                         {plan.teacherName}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3 h-3 text-amber-700" />
                         {plan.duration}
                       </div>
-                      <Badge variant="outline" className="text-xs">{plan.grade}</Badge>
-                      <Badge variant={plan.isPublic ? "default" : "secondary"} className="text-xs">
-                        {plan.isPublic ? "Public" : "Private"}
+                      <Badge variant="outline" className="text-[10px] rounded-none border-stone-700 text-stone-400">{plan.grade}</Badge>
+                      <Badge variant={plan.isPublic ? "default" : "secondary"} className={`text-[10px] rounded-none ${plan.isPublic ? 'bg-amber-900/20 text-amber-500 border border-amber-900/50' : 'bg-stone-800 text-stone-500 border border-stone-700'}`}>
+                        {plan.isPublic ? "PUBLIC" : "RESTRICTED"}
                       </Badge>
                     </div>
 
                     {/* Show attached notes count */}
                     {notes.filter(note => note.lessonPlanId === plan.id).length > 0 && (
-                      <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 p-2 rounded-md">
+                      <div className="flex items-center gap-1.5 text-[10px] text-amber-700 bg-amber-950/20 p-2 border border-amber-900/20 uppercase tracking-widest font-bold">
                         <StickyNote className="w-3.5 h-3.5" />
-                        <span>{notes.filter(note => note.lessonPlanId === plan.id).length} {notes.filter(note => note.lessonPlanId === plan.id).length === 1 ? 'note' : 'notes'} attached</span>
+                        <span>{notes.filter(note => note.lessonPlanId === plan.id).length} {notes.filter(note => note.lessonPlanId === plan.id).length === 1 ? 'DOC' : 'DOCS'} ATTACHED</span>
                       </div>
                     )}
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-2 pt-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleAddNoteToLesson(plan)}
+                        className="rounded-none border-stone-700 text-stone-400 hover:bg-stone-800 hover:text-stone-200 uppercase tracking-widest text-[10px]"
                       >
                         <Paperclip className="w-3 h-3 mr-1" />
-                        Note
+                        Attach
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setEditingPlan(plan)}
+                        className="rounded-none border-stone-700 text-stone-400 hover:bg-stone-800 hover:text-stone-200 uppercase tracking-widest text-[10px]"
                       >
                         <Pencil className="w-3 h-3 mr-1" />
-                        Edit
+                        Modify
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-red-600 hover:text-red-700"
+                        className="rounded-none border-red-900/30 text-red-700 hover:bg-red-950/10 hover:text-red-600 uppercase tracking-widest text-[10px]"
                         onClick={() => setDeletingPlan(plan)}
                       >
                         <Trash2 className="w-3 h-3 mr-1" />
-                        Delete
+                        Purge
                       </Button>
                     </div>
                   </CardContent>
@@ -413,17 +421,17 @@ export function TeacherView({
 
           {/* Delete Confirmation Dialog */}
           <AlertDialog open={!!deletingPlan} onOpenChange={() => setDeletingPlan(null)}>
-            <AlertDialogContent>
+            <AlertDialogContent className="bg-stone-900 border-red-900/50 text-stone-200 rounded-none">
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Lesson?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete "{deletingPlan?.title}"?
+                <AlertDialogTitle className="text-red-500 uppercase tracking-widest text-sm">Initiate Purge Sequence?</AlertDialogTitle>
+                <AlertDialogDescription className="text-stone-500 text-xs">
+                  Permanently removing "{deletingPlan?.title}" from the archives. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-                  Delete
+                <AlertDialogCancel className="rounded-none border-stone-700 text-stone-400 hover:bg-stone-800 hover:text-stone-200 uppercase tracking-widest text-xs">Abort</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-red-900/80 hover:bg-red-800 text-stone-200 rounded-none border border-red-700 uppercase tracking-widest text-xs font-bold shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+                  Confirm Purge
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -431,50 +439,53 @@ export function TeacherView({
 
           {/* Add Note to Lesson Dialog */}
           <Dialog open={!!addingNoteToLesson} onOpenChange={() => setAddingNoteToLesson(null)}>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-stone-900 border-amber-900/50 text-stone-200 rounded-none">
               <DialogHeader>
-                <DialogTitle>Add Note to Lesson</DialogTitle>
-                <DialogDescription>
-                  Attach a study note to "{addingNoteToLesson?.title}"
+                <DialogTitle className="text-amber-500 uppercase tracking-widest text-sm">Append Document</DialogTitle>
+                <DialogDescription className="text-stone-500 text-xs">
+                  Attaching new data to module "{addingNoteToLesson?.title}"
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSubmitNote} className="space-y-4">
+              <form onSubmit={handleSubmitNote} className="space-y-6 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="note-title">Note Title *</Label>
+                  <Label htmlFor="note-title" className="uppercase tracking-widest text-[10px] text-stone-400">Document Title *</Label>
                   <Input
                     id="note-title"
                     value={noteTitle}
                     onChange={(e) => setNoteTitle(e.target.value)}
-                    placeholder="e.g., Key Concepts"
+                    placeholder="E.G. CLASSIFIED ANNEX A"
                     required
+                    className="bg-stone-950 border-amber-900/30 text-stone-200 placeholder:text-stone-700 focus:border-amber-500 rounded-none tracking-wide text-xs"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="note-teacher">Teacher Name *</Label>
+                  <Label htmlFor="note-teacher" className="uppercase tracking-widest text-[10px] text-stone-400">Author *</Label>
                   <Input
                     id="note-teacher"
                     value={noteTeacherName}
                     onChange={(e) => setNoteTeacherName(e.target.value)}
-                    placeholder="e.g., Ms. Johnson"
+                    placeholder="E.G. MAGISTER K."
                     required
+                    className="bg-stone-950 border-amber-900/30 text-stone-200 placeholder:text-stone-700 focus:border-amber-500 rounded-none tracking-wide text-xs"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="note-content">Note Content *</Label>
+                  <Label htmlFor="note-content" className="uppercase tracking-widest text-[10px] text-stone-400">Content Data *</Label>
                   <Textarea
                     id="note-content"
                     value={noteContent}
                     onChange={(e) => setNoteContent(e.target.value)}
-                    placeholder="Enter notes or upload a file below..."
+                    placeholder="Input raw text or upload file..."
                     rows={8}
                     required
+                    className="bg-stone-950 border-amber-900/30 text-stone-300 placeholder:text-stone-700 focus:border-amber-500 rounded-none font-mono text-sm leading-relaxed"
                   />
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 pt-2">
                     <Label
                       htmlFor="note-file-upload"
-                      className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md"
+                      className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-[10px] bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-none border border-stone-600 uppercase tracking-wider transition-colors"
                     >
                       <Upload className="w-3 h-3" />
                       Upload File
@@ -486,51 +497,50 @@ export function TeacherView({
                       onChange={handleNoteFileUpload}
                       className="hidden"
                     />
-                    <span className="text-xs text-gray-500">
-                      Supports .txt, .md, .pdf, .doc, .docx
+                    <span className="text-[10px] text-stone-500 font-mono">
+                      SUPPORTS: .TXT, .MD, .PDF, .DOC
                     </span>
                   </div>
                 </div>
 
-                <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                <div className="space-y-4 p-4 bg-stone-950/50 border border-stone-800">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="note-public">Make this note public</Label>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Public notes are accessible to all students
+                      <Label htmlFor="note-public" className="uppercase tracking-widest text-[10px] text-stone-300">Public Access</Label>
+                      <p className="text-[10px] text-stone-600 mt-0.5 font-mono">
+                        VISIBLE TO ALL INITIATES
                       </p>
                     </div>
                     <Switch
                       id="note-public"
                       checked={noteIsPublic}
                       onCheckedChange={setNoteIsPublic}
+                      className="bg-stone-800 data-[state=checked]:bg-amber-600"
                     />
                   </div>
 
                   {!noteIsPublic && (
-                    <div className="space-y-2">
-                      <Label htmlFor="note-password">Password *</Label>
+                    <div className="space-y-2 pt-2 border-t border-stone-800">
+                      <Label htmlFor="note-password" className="uppercase tracking-widest text-[10px] text-amber-500">Security Clearance Code *</Label>
                       <Input
                         id="note-password"
                         type="password"
                         value={notePassword}
                         onChange={(e) => setNotePassword(e.target.value)}
-                        placeholder="Set a password for this note"
+                        placeholder="SET ACCESS CODE"
                         required={!noteIsPublic}
+                        className="bg-stone-900 border-amber-900/50 text-amber-500 placeholder:text-amber-900/50 focus:border-amber-500 rounded-none tracking-widest"
                       />
-                      <p className="text-xs text-gray-500">
-                        Students will need this password to access the note
-                      </p>
                     </div>
                   )}
                 </div>
 
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setAddingNoteToLesson(null)}>
+                <DialogFooter className="gap-2">
+                  <Button type="button" variant="outline" onClick={() => setAddingNoteToLesson(null)} className="rounded-none border-stone-700 text-stone-400 hover:bg-stone-800 hover:text-stone-200 uppercase tracking-widest text-xs">
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    Add Note
+                  <Button type="submit" className="rounded-none bg-amber-700 hover:bg-amber-600 text-stone-950 font-bold uppercase tracking-widest text-xs">
+                    Append
                   </Button>
                 </DialogFooter>
               </form>
@@ -566,22 +576,34 @@ export function TeacherView({
       </TabsContent>
 
       {/* Bottom Navigation */}
-      <TabsList className="fixed bottom-0 left-0 right-0 max-w-md mx-auto grid grid-cols-4 rounded-none border-t bg-white h-16 shadow-lg">
-        <TabsTrigger value="lessons" className="gap-1 flex-col h-full">
+      <TabsList className="fixed bottom-0 left-0 right-0 max-w-md mx-auto grid grid-cols-4 rounded-none border-t border-amber-900/30 bg-stone-950 h-16 shadow-[0_-5px_20px_rgba(0,0,0,0.5)] z-50">
+        <TabsTrigger
+          value="lessons"
+          className="gap-1 flex-col h-full rounded-none data-[state=active]:bg-stone-900 data-[state=active]:text-amber-500 text-stone-500 hover:text-stone-300 transition-colors uppercase tracking-widest text-[10px]"
+        >
           <BookOpen className="w-5 h-5" />
-          <span className="text-xs">Lessons</span>
+          <span>Archives</span>
         </TabsTrigger>
-        <TabsTrigger value="notes" className="gap-1 flex-col h-full">
+        <TabsTrigger
+          value="notes"
+          className="gap-1 flex-col h-full rounded-none data-[state=active]:bg-stone-900 data-[state=active]:text-amber-500 text-stone-500 hover:text-stone-300 transition-colors uppercase tracking-widest text-[10px]"
+        >
           <FileText className="w-5 h-5" />
-          <span className="text-xs">Notes</span>
+          <span>Docs</span>
         </TabsTrigger>
-        <TabsTrigger value="upload" className="gap-1 flex-col h-full">
+        <TabsTrigger
+          value="upload"
+          className="gap-1 flex-col h-full rounded-none data-[state=active]:bg-stone-900 data-[state=active]:text-amber-500 text-stone-500 hover:text-stone-300 transition-colors uppercase tracking-widest text-[10px]"
+        >
           <Upload className="w-5 h-5" />
-          <span className="text-xs">Upload</span>
+          <span>Ingest</span>
         </TabsTrigger>
-        <TabsTrigger value="conversations" className="gap-1 flex-col h-full">
+        <TabsTrigger
+          value="conversations"
+          className="gap-1 flex-col h-full rounded-none data-[state=active]:bg-stone-900 data-[state=active]:text-amber-500 text-stone-500 hover:text-stone-300 transition-colors uppercase tracking-widest text-[10px]"
+        >
           <MessageSquare className="w-5 h-5" />
-          <span className="text-xs">AI Chat</span>
+          <span>Comms</span>
         </TabsTrigger>
       </TabsList>
     </Tabs>
