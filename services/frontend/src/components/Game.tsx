@@ -30,7 +30,7 @@ export function Game({ onBack }: { onBack: () => void }) {
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Return to the City
                 </Button>
 
-                <header className="mb-24 text-center space-y-6">
+                <header className="mb-24 text-center space-y-6 animate-breathe">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}

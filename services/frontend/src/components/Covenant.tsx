@@ -26,7 +26,7 @@ export function Covenant({ onBack }: { onBack: () => void }) {
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Return to the City
                 </Button>
 
-                <header className="mb-24 text-center space-y-6">
+                <header className="mb-24 text-center space-y-6 animate-breathe">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -178,17 +178,7 @@ export function Covenant({ onBack }: { onBack: () => void }) {
                     </div>
 
                 </div>
-                <div className="flex justify-center mb-24">
-                    <Button
-                        onClick={onBack}
-                        className="bg-amber-600 hover:bg-amber-700 text-stone-950 font-bold py-6 px-12 text-lg uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_40px_rgba(245,158,11,0.5)] transition-all flex items-center gap-4 group"
-                    >
-                        <ShieldCheck className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                        Seal Covenant & Enter
-                    </Button>
-                </div>
             </div>
-
         </PageLayout >
     );
 }

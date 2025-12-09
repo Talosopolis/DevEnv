@@ -30,7 +30,7 @@ const mockConversations: Conversation[] = [
 export default function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-stone-950 font-sans text-stone-200 selection:bg-amber-500/30">
+      <div className="min-h-screen bg-stone-950 font-serif text-stone-200 selection:bg-amber-500/30">
         <Toaster position="top-center" toastOptions={{
           className: 'bg-stone-900 border border-amber-900/50 text-stone-200',
           descriptionClassName: 'text-stone-400'
@@ -191,7 +191,7 @@ function AppContent() {
       onHeroClick={() => navigateTo('manifesto')}
       onLibraryClick={() => navigateTo('library')}
       onCovenantClick={() => navigateTo('covenant')}
-      onGameClick={() => navigateTo('arcade')}
+      onGameClick={() => navigateTo('game')}
       onGuestAccess={() => { bypassAuth(); navigateTo('dashboard'); }}
     />;
   }
@@ -201,10 +201,10 @@ function AppContent() {
   }
 
   // Manifesto / Covenant / Library / Game static pages
-  if (currentView === 'manifesto') return <Manifesto />;
-  if (currentView === 'covenant') return <Covenant />;
-  if (currentView === 'library') return <Library />;
-  if (currentView === 'game') return <Game />;
+  if (currentView === 'manifesto') return <Manifesto onBack={() => navigateTo('landing')} />;
+  if (currentView === 'covenant') return <Covenant onBack={() => navigateTo('landing')} />;
+  if (currentView === 'library') return <Library onBack={() => navigateTo('landing')} onSearch={async () => "Search functionality coming soon."} />;
+  if (currentView === 'game') return <Game onBack={() => navigateTo('landing')} />;
 
 
   // --- DASHBOARD (Main App) ---

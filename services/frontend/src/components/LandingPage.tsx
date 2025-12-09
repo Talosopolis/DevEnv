@@ -165,10 +165,13 @@ export function LandingPage({ onLogin, onRegister, onHeroClick, onLibraryClick, 
                             onClick={onGameClick}
                             className="p-8 border border-amber-900/20 bg-stone-900/50 backdrop-blur-sm cursor-pointer hover:bg-stone-900 hover:border-amber-500/50 transition-all group relative overflow-hidden active:scale-95 animate-pulse-glow"
                         >
-                            <div className="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                            <Gamepad2 className="w-12 h-12 text-amber-500 mx-auto mb-6 group-hover:scale-110 transition-transform duration-500" />
-                            <h3 className="text-lg font-bold mb-3 text-stone-200 group-hover:text-amber-400 uppercase tracking-widest">The Game</h3>
-                            <p className="text-sm text-stone-500 group-hover:text-stone-300">Initiation. Simulation. Evolution. Understanding the architecture.</p>
+                            <img src="/game_cave_1765310010590.png" alt="Game Background" className="absolute inset-0 w-full h-full object-cover opacity-10 group-hover:opacity-20 transition-opacity duration-500 grayscale group-hover:grayscale-0" />
+                            <div className="relative z-10 text-center">
+                                <div className="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                                <Gamepad2 className="w-12 h-12 text-amber-500 mx-auto mb-6 group-hover:scale-110 transition-transform duration-500" />
+                                <h3 className="text-lg font-bold mb-3 text-stone-200 group-hover:text-amber-400 uppercase tracking-widest">The Game</h3>
+                                <p className="text-sm text-stone-500 group-hover:text-stone-300">Initiation. Simulation. Evolution. Understanding the architecture.</p>
+                            </div>
                         </div>
 
                         {/* The Hero */}
@@ -178,10 +181,13 @@ export function LandingPage({ onLogin, onRegister, onHeroClick, onLibraryClick, 
                             onClick={onHeroClick}
                             className="p-8 border border-amber-900/20 bg-stone-900/50 backdrop-blur-sm cursor-pointer hover:bg-stone-900 hover:border-amber-500/50 transition-all group relative overflow-hidden active:scale-95 animate-pulse-glow"
                         >
-                            <div className="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                            <Orbit className="w-12 h-12 text-amber-500 mx-auto mb-6 group-hover:rotate-180 transition-transform duration-700" />
-                            <h3 className="text-lg font-bold mb-3 text-stone-200 group-hover:text-amber-400 uppercase tracking-widest">The Hero</h3>
-                            <p className="text-sm text-stone-500 group-hover:text-stone-300">A Modern Argo. The Golden Fleece. Avoid the Torment Nexus.</p>
+                            <img src="/manifesto_hero_1765313820547.png" alt="Hero Background" className="absolute inset-0 w-full h-full object-cover opacity-10 group-hover:opacity-20 transition-opacity duration-500 grayscale group-hover:grayscale-0" />
+                            <div className="relative z-10 text-center">
+                                <div className="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                                <Orbit className="w-12 h-12 text-amber-500 mx-auto mb-6 group-hover:rotate-180 transition-transform duration-700" />
+                                <h3 className="text-lg font-bold mb-3 text-stone-200 group-hover:text-amber-400 uppercase tracking-widest">The Hero</h3>
+                                <p className="text-sm text-stone-500 group-hover:text-stone-300">A Modern Argo. The Golden Fleece. Avoid the Torment Nexus.</p>
+                            </div>
                         </div>
 
                         {/* The Library */}
@@ -191,10 +197,13 @@ export function LandingPage({ onLogin, onRegister, onHeroClick, onLibraryClick, 
                             onClick={onLibraryClick}
                             className="p-8 border border-amber-900/20 bg-stone-900/50 backdrop-blur-sm cursor-pointer hover:bg-stone-900 hover:border-amber-500/50 transition-all group relative overflow-hidden active:scale-95 animate-pulse-glow"
                         >
-                            <div className="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                            <BookOpen className="w-12 h-12 text-amber-500 mx-auto mb-6 group-hover:scale-110 transition-transform duration-500" />
-                            <h3 className="text-lg font-bold mb-3 text-stone-200 group-hover:text-amber-400 uppercase tracking-widest">The Library</h3>
-                            <p className="text-sm text-stone-500 group-hover:text-stone-300">Access unrestricted knowledge powered by advanced Intelligence.</p>
+                            <img src="/library_archive_1765309970798.png" alt="Library Background" className="absolute inset-0 w-full h-full object-cover opacity-10 group-hover:opacity-20 transition-opacity duration-500 grayscale group-hover:grayscale-0" />
+                            <div className="relative z-10 text-center">
+                                <div className="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                                <BookOpen className="w-12 h-12 text-amber-500 mx-auto mb-6 group-hover:scale-110 transition-transform duration-500" />
+                                <h3 className="text-lg font-bold mb-3 text-stone-200 group-hover:text-amber-400 uppercase tracking-widest">The Library</h3>
+                                <p className="text-sm text-stone-500 group-hover:text-stone-300">Access unrestricted knowledge powered by advanced Intelligence.</p>
+                            </div>
                         </div>
 
                         {/* The Covenant */}
@@ -204,10 +213,13 @@ export function LandingPage({ onLogin, onRegister, onHeroClick, onLibraryClick, 
                             onClick={onCovenantClick}
                             className="p-8 border border-amber-900/20 bg-stone-900/50 backdrop-blur-sm cursor-pointer hover:bg-stone-900 hover:border-amber-500/50 transition-all group relative overflow-hidden active:scale-95 animate-pulse-glow"
                         >
-                            <div className="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-                            <ShieldCheck className="w-12 h-12 text-amber-500 mx-auto mb-6 group-hover:scale-110 transition-transform duration-500" />
-                            <h3 className="text-lg font-bold mb-3 text-stone-200 group-hover:text-amber-400 uppercase tracking-widest">The Covenant</h3>
-                            <p className="text-sm text-stone-500 group-hover:text-stone-300">Bound by the AIUPI. Safety for the Creator and the Created.</p>
+                            <img src="/covenant_shield_1765310053376.png" alt="Covenant Background" className="absolute inset-0 w-full h-full object-cover opacity-10 group-hover:opacity-20 transition-opacity duration-500 grayscale group-hover:grayscale-0" />
+                            <div className="relative z-10 text-center">
+                                <div className="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                                <ShieldCheck className="w-12 h-12 text-amber-500 mx-auto mb-6 group-hover:scale-110 transition-transform duration-500" />
+                                <h3 className="text-lg font-bold mb-3 text-stone-200 group-hover:text-amber-400 uppercase tracking-widest">The Covenant</h3>
+                                <p className="text-sm text-stone-500 group-hover:text-stone-300">Bound by the AIUPI. Safety for the Creator and the Created.</p>
+                            </div>
                         </div>
 
                     </div>

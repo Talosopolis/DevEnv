@@ -88,7 +88,7 @@ export function Manifesto({ onBack }: { onBack: () => void }) {
                         {/* Section 3: The Challenge */}
                         <section className="grid md:grid-cols-2 gap-12 items-center animate-breathe">
                             <div className="order-2 md:order-1 border-4 border-double border-amber-900/30 p-2 bg-stone-900/50 -rotate-2 hover:rotate-0 transition-transform duration-700 animate-pulse-glow">
-                                <img src="/manifesto_labyrinth.png" alt="The Labyrinth" className="w-full h-auto sepia-[.5] opacity-80" />
+                                <img src="/manifesto_labyrinth_1765299505555.png" alt="The Labyrinth" className="w-full h-auto sepia-[.5] opacity-80" />
                             </div>
                             <div className="order-1 md:order-2 space-y-6">
                                 <h2 className="text-2xl font-bold text-amber-500 uppercase tracking-widest">
@@ -123,7 +123,7 @@ export function Manifesto({ onBack }: { onBack: () => void }) {
                                 </div>
                             </div>
                             <div className="mt-8 border-t border-amber-900/20 pt-8">
-                                <img src="/manifesto_hubris.png" alt="The Machine Eye" className="w-full max-w-sm mx-auto opacity-60 mix-blend-screen" />
+                                <img src="/manifesto_hubris_1765299653509.png" alt="The Machine Eye" className="w-full max-w-sm mx-auto opacity-60 mix-blend-screen" />
                                 <p className="text-center text-xs text-red-500 mt-4 tracking-widest uppercase">
                                     Talosopolis is committed to Not Building the Torment Nexus. Our architecture and code are fundamentally built to refuse to facilitate the construction of such a nightmare.
                                 </p>
@@ -163,7 +163,7 @@ export function Manifesto({ onBack }: { onBack: () => void }) {
                                 </p>
                             </div>
                             <div className="border-4 border-double border-amber-900/30 p-2 bg-stone-900/50 rotate-1 hover:rotate-0 transition-transform duration-700 animate-pulse-glow">
-                                <img src="/manifesto_ascent.png" alt="The Akashic Records" className="w-full h-auto sepia-[.5] opacity-80" />
+                                <img src="/manifesto_ascent_1765299726237.png" alt="The Akashic Records" className="w-full h-auto sepia-[.5] opacity-80" />
                             </div>
                         </section>
 
