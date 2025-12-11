@@ -6,6 +6,9 @@ from typing import Optional, List, Dict
 import random
 from rag_service import RAGService
 from course_generator import CourseGenerator
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Talosopolis AI Backend", version="1.0.0")
 
@@ -372,6 +375,8 @@ async def generate_quiz(request: QuizRequest):
     try:
         from google import genai
         from google.genai import types
+        from ai_utils import generate_content_with_fallback
+        
         client = genai.Client(api_key=api_key)
         
         prompt = f"""
@@ -381,8 +386,8 @@ async def generate_quiz(request: QuizRequest):
         Return JSON with fields: 'question', 'options' (list of 4 strings), 'correct_option_index' (int), and 'explanation'.
         """
         
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
+        response = await generate_content_with_fallback(
+            client,
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json"
@@ -394,11 +399,8 @@ async def generate_quiz(request: QuizRequest):
         
     except Exception as e:
         print(f"Error generating quiz: {e}")
-        # Fallback to random selected question from hardcoded set so game is playable
-        import random
-        fallback = random.choice(SPARTAN_GREECE_QUIZ).copy() # Copy to avoid mutating global
-        fallback["explanation"] += f" (Offline Mode: {str(e)[:20]}...)"
-        return fallback
+        # Raise error to trigger frontend offline math fallback
+        raise HTTPException(status_code=503, detail="AI Service Unavailable")
 
 if __name__ == "__main__":
     import uvicorn

@@ -185,6 +185,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                     previous_questions: seenQuestions.current
                 })
             })
+            if (!res.ok) throw new Error("API Error")
             const data = await res.json()
             const qText = data.question || "Error loading question."
             setCurrentQuestion(qText)
@@ -217,15 +218,53 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
 
         } catch (err) {
             console.warn("Using fallback question due to error:", err)
-            setCurrentQuestion("Error loading. Check connection.")
+
+            // Generate Random Math Problem for Fallback
+            const ops = ['+', '-', '*'];
+            const op = ops[Math.floor(Math.random() * ops.length)];
+            let a = Math.floor(Math.random() * 12) + 1;
+            let b = Math.floor(Math.random() * 12) + 1;
+
+            // Simplify subtraction to non-negative
+            if (op === '-' && a < b) [a, b] = [b, a];
+
+            const questionText = `${a} ${op} ${b} = ?`;
+            let answer = 0;
+            if (op === '+') answer = a + b;
+            if (op === '-') answer = a - b;
+            if (op === '*') answer = a * b;
+
+            // Generate Options
+            const options = new Set<number>();
+            options.add(answer);
+            while (options.size < 4) {
+                const offset = Math.floor(Math.random() * 10) - 5;
+                const wrong = answer + offset;
+                if (wrong !== answer && wrong >= 0) options.add(wrong);
+            }
+            const shuffledOptions = Array.from(options).sort(() => Math.random() - 0.5);
+            const correctIndex = shuffledOptions.indexOf(answer);
+
+            setCurrentQuestion(`OFFLINE MODE: ${questionText}`)
             const config = (CONFIG as any)[currentDiff]
-            const s = config.enemySpeed * 2
-            enemies.current = [
-                { x: 100, y: 80, width: 250, height: 60, text: "Athens", isCorrect: false, active: true, index: 0, vx: s, vy: s },
-                { x: 450, y: 80, width: 250, height: 60, text: "Sparta", isCorrect: true, active: true, index: 1, vx: -s, vy: s },
-                { x: 100, y: 200, width: 250, height: 60, text: "Thebes", isCorrect: false, active: true, index: 2, vx: s, vy: -s },
-                { x: 450, y: 200, width: 250, height: 60, text: "Corinth", isCorrect: false, active: true, index: 3, vx: -s, vy: -s },
-            ]
+            const s = config.enemySpeed * 1.2
+
+            const newEnemies = shuffledOptions.map((opt, i) => {
+                const vx = (Math.random() > 0.5 ? 1 : -1) * (s * (0.8 + Math.random() * 0.4))
+                const vy = (Math.random() > 0.5 ? 1 : -1) * (s * (0.8 + Math.random() * 0.4))
+                const xSlot = (i % 2) * 350 + 50
+                const ySlot = Math.floor(i / 2) * 100 + 50
+
+                return {
+                    x: xSlot + Math.random() * 50,
+                    y: ySlot + Math.random() * 20,
+                    width: 250, height: 80,
+                    text: opt.toString(),
+                    isCorrect: i === correctIndex,
+                    active: true, index: i, vx, vy
+                }
+            })
+            enemies.current = newEnemies
             if (overrideDiff) setGameState('playing')
         }
     }, [questionCount, questionsCorrect, topic, difficulty])

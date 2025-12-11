@@ -141,6 +141,14 @@ export function TeacherView({
         if (!noteTitle) {
           setNoteTitle(file.name.replace(/\.[^/.]+$/, ""));
         }
+
+        // Background Ingest to AI
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("course_id", "default");
+        fetch("http://localhost:8000/ingest", { method: "POST", body: formData })
+          .catch(e => console.error("AI Ingest Error:", e));
+
         toast.success(`File "${file.name}" loaded`);
       };
       reader.readAsText(file);
@@ -175,6 +183,14 @@ export function TeacherView({
       if (!noteTitle) {
         setNoteTitle(file.name.replace(/\.[^/.]+$/, ""));
       }
+
+      // Background Ingest to AI
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("course_id", "default");
+      fetch("http://localhost:8000/ingest", { method: "POST", body: formData })
+        .catch(e => console.error("AI Ingest Error:", e));
+
       toast.success(`PDF "${file.name}" loaded successfully`);
     } catch (error) {
       console.error('Error reading PDF:', error);

@@ -81,7 +81,7 @@ class CourseGenerator:
 
         try:
             response = self.client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json"
@@ -155,18 +155,22 @@ class CourseGenerator:
         """
 
         try:
-            # Simple stateless call with context in prompt for now (cheaper/faster than history obj for this demo)
-            response = self.client.models.generate_content(
-                model="gemini-2.0-flash",
+            # Import fallback helper
+            from ai_utils import generate_content_with_fallback
+            
+            response = await generate_content_with_fallback(
+                self.client,
                 contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction
-                )
+                system_instruction=system_instruction
             )
+            
             return response.text
         except Exception as e:
             error_msg = str(e)
             if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-                return "My neural link is overloaded (Google API Quota Exceeded). Please give me a moment to cooldown and try again."
+                 return "My neural link is overloaded (Google API Quota Exceeded). Please give me a moment to cooldown and try again."
+            if "503" in error_msg:
+                 return "I am currently experiencing high network traffic (Model Overloaded). Please try again in a few seconds."
+            
             logger.error(f"Chat generation failed: {e}")
             return f"I'm having trouble connecting to my brain uplink. Error: {error_msg[:100]}..."

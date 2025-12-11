@@ -24,6 +24,16 @@ spec:
           value: "${PROJECT_ID}"
         - name: GEMINI_MODEL
           value: "gemini-2.5-flash-001"
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-backend-secrets
+              key: google-api-key
+        - name: DATA_DIR
+          value: "/app/data"
+        volumeMounts:
+        - name: data-volume
+          mountPath: "/app/data"
         resources:
           requests:
             cpu: "200m"

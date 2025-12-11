@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Upload, FileText, CheckCircle, AlertCircle, X } from "lucide-react";
-import { LessonPlan } from "../App";
-import { toast } from "sonner@2.0.3";
+import { LessonPlan } from "../types";
+import { toast } from "sonner";
 
 type FileUploadProps = {
   onExtracted: (plan: Omit<LessonPlan, "id" | "createdAt">) => void;
@@ -40,7 +40,7 @@ export function FileUpload({ onExtracted, onCancel }: FileUploadProps) {
 
     // Simulate extracted data based on file type
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    
+
     // Mock extracted lesson plan data
     // In a real implementation, this would use libraries like:
     // - pdf.js or pdfjs-dist for PDF parsing
@@ -81,7 +81,25 @@ export function FileUpload({ onExtracted, onCancel }: FileUploadProps) {
     setError(null);
 
     try {
+      // 1. Simulate extraction (keep this for the UI "Lesson Plan" data)
       const extractedPlan = await simulateExtraction(file);
+
+      // 2. REAL Backend Ingestion (for RAG)
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("course_id", "default"); // Global context for now
+
+      try {
+        await fetch("http://localhost:8000/ingest", {
+          method: "POST",
+          body: formData,
+        });
+        toast.success("File added to AI Knowledge Base!");
+      } catch (backendError) {
+        console.error("Backend ingest failed:", backendError);
+        toast.error("AI Ingest failed (is backend running?), but continuing...");
+      }
+
       toast.success("File processed successfully!");
       onExtracted(extractedPlan);
     } catch (err) {

@@ -296,9 +296,24 @@ class FirebaseDatabaseService implements DatabaseInterface {
     subscribeToAuth(callback: (user: User | null) => void): () => void {
         return this.auth.onAuthStateChanged(async (firebaseUser) => {
             if (firebaseUser) {
+                // Inline Timeout Helper (duplicated for safety/scope simplicity here, or we could make it a class method)
+                const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+                    return new Promise((resolve, reject) => {
+                        const timer = setTimeout(() => {
+                            reject(new Error(`Timeout: ${label}`));
+                        }, ms);
+                        promise.then(v => { clearTimeout(timer); resolve(v); }).catch(e => { clearTimeout(timer); reject(e); });
+                    });
+                };
+
                 try {
-                    // Fetch full profile
-                    const userDoc = await getDoc(doc(this.db, "users", firebaseUser.uid));
+                    // Fetch full profile with Timeout
+                    const userDoc = await withTimeout(
+                        getDoc(doc(this.db, "users", firebaseUser.uid)),
+                        3000,
+                        "Auth Listener Profile Fetch"
+                    );
+
                     if (userDoc.exists()) {
                         callback(userDoc.data() as User);
                     } else {
@@ -306,7 +321,7 @@ class FirebaseDatabaseService implements DatabaseInterface {
                         throw new Error("Doc missing");
                     }
                 } catch (e) {
-                    console.warn("Firestore unavailable or blocking:", e);
+                    console.warn("Firestore unavailable or blocking in Auth Listener. Using basic fallback.", e);
                     // Fallback to basic auth info so user can at least see UI
                     callback({
                         id: firebaseUser.uid,
