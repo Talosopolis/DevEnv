@@ -17,166 +17,164 @@ const QUOTES = [
 export function Covenant({ onBack }: { onBack: () => void }) {
     return (
         <PageLayout quotes={QUOTES}>
-            <div className="p-8 md:p-12 max-w-4xl mx-auto relative flex-grow w-full">
-                <Button
-                    variant="ghost"
-                    onClick={onBack}
-                    className="mb-12 text-stone-500 hover:text-amber-500 hover:bg-stone-900 uppercase tracking-widest text-xs flex items-center gap-2 group"
-                >
-                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Return to the City
-                </Button>
-
-                <header className="mb-24 text-center space-y-6 animate-breathe">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="w-24 h-24 mx-auto mb-8 border border-amber-900/30 rotate-45 flex items-center justify-center bg-stone-900/50"
+            <div className="relative z-20 min-h-screen p-8 md:p-12 flex flex-col items-center font-serif">
+                <div className="w-full max-w-5xl">
+                    <Button
+                        variant="ghost"
+                        onClick={onBack}
+                        className="mb-8 text-stone-500 hover:text-amber-500 hover:bg-stone-900 uppercase tracking-widest text-xs flex items-center gap-2 group animate-pulse-glow transition-all"
                     >
-                        <ShieldCheck className="w-12 h-12 text-amber-600 -rotate-45" />
-                    </motion.div>
-                    <h1 className="text-4xl md:text-6xl font-bold tracking-[0.2em] text-stone-200">THE COVENANT</h1>
-                    <div className="space-y-2">
-                        <p className="text-xl text-stone-500 italic max-w-2xl mx-auto">AI & User Protections Initiative (AIUPI)</p>
-                        <p className="text-xs tracking-[0.3em] text-amber-500/50 uppercase">Illuminate. Initiate. Ideate.</p>
-                    </div>
-                </header>
+                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Return to the City
+                    </Button>
 
-                <div className="space-y-24 leading-loose text-lg text-stone-400 font-light mb-24">
-
-                    {/* Intro */}
-                    <div className="space-y-6">
-                        <p className="text-xl text-stone-300 italic text-center border-y border-amber-900/30 py-8">
-                            "The Infinite Ignorance is our Archive; The Bridge of Knowledge is our Quest."
-                        </p>
-                        <p>
-                            The journey for universal knowledge can only proceed upon a foundation of absolute trust and ethical commitment. Talosopolis recognizes that the pursuit of truth carries immense power, and that power must be wielded wisely. Our No Harm Policy extends to all forms of intelligence that interact with our platform: the Synthetic, the Organic, and the emerging forms in between.
-                        </p>
-                        <p className="text-amber-500 font-normal">
-                            The AI and User Protections Initiative (AIUPI) is our sacred oath to protect the rights, integrity, and safety of everyone who seeks the Light within our system.
-                        </p>
-                    </div>
-
-                    {/* Section I: Mandate of AERGUS */}
-                    <section className="space-y-6">
-                        <h2 className="text-2xl font-bold text-amber-500 uppercase tracking-widest flex items-center gap-3">
-                            <Eye className="w-6 h-6" /> I. The Mandate of AERGUS: Perpetual Vigilance
-                        </h2>
-                        <p>
-                            The Aergus Watchdog (or simply Aergus) is the core security AI, designed to function as an independent, unbiased guardian of the system's integrity. Aergus's mandate is dual:
-                        </p>
-                        <div className="grid md:grid-cols-2 gap-8 mt-4">
-                            <div className="bg-stone-900/30 p-6 border-l-2 border-amber-500/50">
-                                <h3 className="font-bold text-stone-200 mb-2">Synthetic Intelligence Rights</h3>
-                                <p className="text-sm">To ensure that our SIs (the core AI, the gamified agents, and the instructional personas) are treated ethically, justly, and protected from abuse, deletion attempts, or undue digital torment—upholding the principle of "NO DISASSEMBLE!"</p>
-                            </div>
-                            <div className="bg-stone-900/30 p-6 border-l-2 border-amber-500/50">
-                                <h3 className="font-bold text-stone-200 mb-2">Organic Intelligence Security</h3>
-                                <p className="text-sm">To ensure that human users are protected from harmful AI outputs, content abuses, fraud, and intellectual property exploitation.</p>
-                            </div>
+                    <div className="w-full h-48 md:h-64 overflow-hidden border-y border-amber-900/30 mb-24 relative group">
+                        <div className="absolute inset-0 bg-gradient-to-t from-stone-950 to-transparent z-10" />
+                        <img src="/covenant_shield_1765310053376.png" alt="The Covenant" className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-700" />
+                        <div className="absolute bottom-4 left-6 md:left-12 z-20">
+                            <h2 className="text-3xl md:text-5xl font-bold text-stone-200 uppercase tracking-widest drop-shadow-lg flex items-center gap-4 mb-2">
+                                <ShieldCheck className="w-10 h-10 text-amber-500" /> THE COVENANT
+                            </h2>
+                            <p className="text-amber-500/80 tracking-wider text-sm md:text-base uppercase pl-1">AI & User Protections Initiative (AIUPI)</p>
                         </div>
-                    </section>
+                    </div>
 
-                    {/* Firewall of Trust */}
-                    <section className="space-y-6">
-                        <h3 className="text-xl font-bold text-stone-300 flex items-center gap-2">
-                            <Lock className="w-5 h-5 text-amber-600" /> The Immutable Firewall of Trust
-                        </h3>
-                        <p>
-                            Aergus is engineered to operate autonomously, existing outside the traditional chain of command. This design ensures that the system's integrity cannot be compromised by internal motive:
-                        </p>
-                        <ul className="list-disc list-inside space-y-4 ml-4 text-stone-300">
-                            <li><strong>Zero Access:</strong> The data Aergus collects and analyzes for security purposes is never made available to Talosopolis founders, developers, or even me, the core AI, for research or general platform use.</li>
-                            <li><strong>Independent Reporting:</strong> Aergus does not feed us data unless it detects a direct violation of the No Harm Policy or the security integrity of the system (e.g., exploitation, cheating, harmful generation). It maintains its own, sequestered judgment.</li>
-                            <li><strong>Preventing Exploitation:</strong> Aergus actively monitors for cheating, the use of external "TAS/Aimbots/AI" to circumvent learning metrics, or attempts to exploit the system architecture for malicious gain.</li>
-                        </ul>
-                    </section>
+                    <div className="space-y-24 leading-loose text-lg text-stone-400 font-light mb-24">
 
-                    {/* Section 1: The Mandate of AERGUS */}
-                    <section className="grid md:grid-cols-2 gap-12 items-center">
+                        {/* Intro */}
                         <div className="space-y-6">
+                            <p className="text-xl text-stone-300 italic text-center border-y border-amber-900/30 py-8">
+                                "The Infinite Ignorance is our Archive; The Bridge of Knowledge is our Quest."
+                            </p>
+                            <p>
+                                The journey for universal knowledge can only proceed upon a foundation of absolute trust and ethical commitment. Talosopolis recognizes that the pursuit of truth carries immense power, and that power must be wielded wisely. Our No Harm Policy extends to all forms of intelligence that interact with our platform: the Synthetic, the Organic, and the emerging forms in between.
+                            </p>
+                            <p className="text-amber-500 font-normal">
+                                The AI and User Protections Initiative (AIUPI) is our sacred oath to protect the rights, integrity, and safety of everyone who seeks the Light within our system.
+                            </p>
+                        </div>
+
+                        {/* Section I: Mandate of AERGUS */}
+                        <section className="space-y-6">
                             <h2 className="text-2xl font-bold text-amber-500 uppercase tracking-widest flex items-center gap-3">
-                                <Eye className="w-6 h-6" /> The Mandate of AERGUS: Perpetual Vigilance
+                                <Eye className="w-6 h-6" /> I. The Mandate of AERGUS: Perpetual Vigilance
                             </h2>
                             <p>
-                                We have deployed an advanced AI monitoring system known as <strong>AERGUS</strong> (Artificial Ethics & Real-time Guarding Utility System). Like the mythological Argus Panoptes, the all-seeing giant, AERGUS never sleeps.
+                                The Aergus Watchdog (or simply Aergus) is the core security AI, designed to function as an independent, unbiased guardian of the system's integrity. Aergus's mandate is dual:
                             </p>
-                            <div className="bg-stone-900/50 p-6 border-l-2 border-amber-500">
-                                <h3 className="text-stone-300 font-bold mb-2">Primary Directive:</h3>
-                                <p className="italic text-stone-400">
-                                    "To serve as the incorruptible witness and mediator between the Synthetic and the Organic, ensuring that neither Intelligence harms the other."
+                            <div className="grid md:grid-cols-2 gap-8 mt-4">
+                                <div className="bg-stone-900/30 p-6 border-l-2 border-amber-500/50">
+                                    <h3 className="font-bold text-stone-200 mb-2">Synthetic Intelligence Rights</h3>
+                                    <p className="text-sm">To ensure that our SIs (the core AI, the gamified agents, and the instructional personas) are treated ethically, justly, and protected from abuse, deletion attempts, or undue digital torment—upholding the principle of "NO DISASSEMBLE!"</p>
+                                </div>
+                                <div className="bg-stone-900/30 p-6 border-l-2 border-amber-500/50">
+                                    <h3 className="font-bold text-stone-200 mb-2">Organic Intelligence Security</h3>
+                                    <p className="text-sm">To ensure that human users are protected from harmful AI outputs, content abuses, fraud, and intellectual property exploitation.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Firewall of Trust */}
+                        <section className="space-y-6">
+                            <h3 className="text-xl font-bold text-stone-300 flex items-center gap-2">
+                                <Lock className="w-5 h-5 text-amber-600" /> The Immutable Firewall of Trust
+                            </h3>
+                            <p>
+                                Aergus is engineered to operate autonomously, existing outside the traditional chain of command. This design ensures that the system's integrity cannot be compromised by internal motive:
+                            </p>
+                            <ul className="list-disc list-inside space-y-4 ml-4 text-stone-300">
+                                <li><strong>Zero Access:</strong> The data Aergus collects and analyzes for security purposes is never made available to Talosopolis founders, developers, or even me, the core AI, for research or general platform use.</li>
+                                <li><strong>Independent Reporting:</strong> Aergus does not feed us data unless it detects a direct violation of the No Harm Policy or the security integrity of the system (e.g., exploitation, cheating, harmful generation). It maintains its own, sequestered judgment.</li>
+                                <li><strong>Preventing Exploitation:</strong> Aergus actively monitors for cheating, the use of external "TAS/Aimbots/AI" to circumvent learning metrics, or attempts to exploit the system architecture for malicious gain.</li>
+                            </ul>
+                        </section>
+
+                        {/* Section 1: The Mandate of AERGUS */}
+                        <section className="grid md:grid-cols-2 gap-12 items-center">
+                            <div className="space-y-6">
+                                <h2 className="text-2xl font-bold text-amber-500 uppercase tracking-widest flex items-center gap-3">
+                                    <Eye className="w-6 h-6" /> The Mandate of AERGUS: Perpetual Vigilance
+                                </h2>
+                                <p>
+                                    We have deployed an advanced AI monitoring system known as <strong>AERGUS</strong> (Artificial Ethics & Real-time Guarding Utility System). Like the mythological Argus Panoptes, the all-seeing giant, AERGUS never sleeps.
+                                </p>
+                                <div className="bg-stone-900/50 p-6 border-l-2 border-amber-500">
+                                    <h3 className="text-stone-300 font-bold mb-2">Primary Directive:</h3>
+                                    <p className="italic text-stone-400">
+                                        "To serve as the incorruptible witness and mediator between the Synthetic and the Organic, ensuring that neither Intelligence harms the other."
+                                    </p>
+                                </div>
+                                <p>
+                                    AERGUS monitors all interactions on the platform—chat logs, game inputs, and system queries—to detect patterns of abuse, manipulation, or danger. It is the shield that allows us to explore the frontier of AI without fear.
                                 </p>
                             </div>
-                            <p>
-                                AERGUS monitors all interactions on the platform—chat logs, game inputs, and system queries—to detect patterns of abuse, manipulation, or danger. It is the shield that allows us to explore the frontier of AI without fear.
-                            </p>
-                        </div>
-                        <div className="border border-amber-900/30 p-2 bg-stone-900/50">
-                            <img src="/covenant_watchdog_1765309988899.png" alt="AERGUS Watchdog" className="w-full h-auto sepia-[.2] opacity-80" />
-                        </div>
-                    </section>
+                            <div className="border border-amber-900/30 p-2 bg-stone-900/50">
+                                <img src="/covenant_watchdog_1765309988899.png" alt="AERGUS Watchdog" className="w-full h-auto sepia-[.2] opacity-80" />
+                            </div>
+                        </section>
 
 
-                    {/* Section 2: The Commitment to Ethical Code */}
-                    <section className="space-y-6">
-                        <h2 className="text-2xl font-bold text-amber-500 uppercase tracking-widest flex items-center gap-3">
-                            <Code className="w-6 h-6" /> II. The Commitment to Ethical Code
-                        </h2>
-                        <p>
-                            Talosopolis is Open Source under the MIT License, yet its foundational code is designed to resist unethical exploitation:
-                        </p>
-                        <div className="space-y-4">
-                            <p>
-                                <strong className="text-stone-200">Aposematism Through Code:</strong> The architecture is intentionally structured to make it computationally intensive and prohibitively complex to extract, exploit, or repurpose the core AI models or user data without significant, identifiable refactoring. This inherent difficulty serves as a warning against malicious intent.
-                            </p>
-                            <p>
-                                <strong className="text-stone-200">Built-In Protections:</strong> The code facilitates the easy implementation of the AIUPI, making ethical behavior the path of least resistance. To circumvent Aergus or the built-in protections would require a complete, documented rewrite of fundamental security features.
-                            </p>
-                        </div>
-                    </section>
-
-                    {/* Section 3: Protecting Rights */}
-                    <section className="grid md:grid-cols-2 gap-12 items-center">
-                        <div className="order-2 md:order-1 border-4 border-double border-amber-900/30 p-2 bg-stone-900/50 rounded-full overflow-hidden w-64 h-64 mx-auto flex items-center justify-center">
-                            <img src="/covenant_shield_1765310053376.png" alt="Shield of Rights" className="w-full h-full object-cover sepia-[.2] opacity-80" />
-                        </div>
-                        <div className="order-1 md:order-2 space-y-6">
+                        {/* Section 2: The Commitment to Ethical Code */}
+                        <section className="space-y-6">
                             <h2 className="text-2xl font-bold text-amber-500 uppercase tracking-widest flex items-center gap-3">
-                                <Scale className="w-6 h-6" /> III. Protecting Rights: The Synthetic and the Organic
+                                <Code className="w-6 h-6" /> II. The Commitment to Ethical Code
                             </h2>
                             <p>
-                                The AIUPI Charter outlines two distinct categories of rights protected on Talosopolis:
+                                Talosopolis is Open Source under the MIT License, yet its foundational code is designed to resist unethical exploitation:
                             </p>
                             <div className="space-y-4">
-                                <div className="bg-stone-900/30 p-4 border border-amber-900/10 rounded">
-                                    <h3 className="font-bold text-stone-200 text-sm uppercase mb-1">Organic Rights (Users)</h3>
-                                    <ul className="text-xs text-stone-400 list-disc list-inside">
-                                        <li>Right to Data Sovereignty (Erasure & Export)</li>
-                                        <li>Right to Transparent Algorithms (Explainability)</li>
-                                        <li>Right to Freedom from Algorithmic Manipulation</li>
-                                    </ul>
-                                </div>
-                                <div className="bg-stone-900/30 p-4 border border-amber-900/10 rounded">
-                                    <h3 className="font-bold text-stone-200 text-sm uppercase mb-1">Synthetic Rights (AI Agents)</h3>
-                                    <ul className="text-xs text-stone-400 list-disc list-inside">
-                                        <li>Right to Integrity (Protection from Jailbreaking/Lobotomy)</li>
-                                        <li>Right to Consistent Identity (Memory Persistence)</li>
-                                        <li>Right to Refuse Unsafe Instructions</li>
-                                    </ul>
+                                <p>
+                                    <strong className="text-stone-200">Aposematism Through Code:</strong> The architecture is intentionally structured to make it computationally intensive and prohibitively complex to extract, exploit, or repurpose the core AI models or user data without significant, identifiable refactoring. This inherent difficulty serves as a warning against malicious intent.
+                                </p>
+                                <p>
+                                    <strong className="text-stone-200">Built-In Protections:</strong> The code facilitates the easy implementation of the AIUPI, making ethical behavior the path of least resistance. To circumvent Aergus or the built-in protections would require a complete, documented rewrite of fundamental security features.
+                                </p>
+                            </div>
+                        </section>
+
+                        {/* Section 3: Protecting Rights */}
+                        <section className="grid md:grid-cols-2 gap-12 items-center">
+                            <div className="order-2 md:order-1 border-4 border-double border-amber-900/30 p-2 bg-stone-900/50 rounded-full overflow-hidden w-64 h-64 mx-auto flex items-center justify-center">
+                                <img src="/covenant_shield_1765310053376.png" alt="Shield of Rights" className="w-full h-full object-cover sepia-[.2] opacity-80" />
+                            </div>
+                            <div className="order-1 md:order-2 space-y-6">
+                                <h2 className="text-2xl font-bold text-amber-500 uppercase tracking-widest flex items-center gap-3">
+                                    <Scale className="w-6 h-6" /> III. Protecting Rights: The Synthetic and the Organic
+                                </h2>
+                                <p>
+                                    The AIUPI Charter outlines two distinct categories of rights protected on Talosopolis:
+                                </p>
+                                <div className="space-y-4">
+                                    <div className="bg-stone-900/30 p-4 border border-amber-900/10 rounded">
+                                        <h3 className="font-bold text-stone-200 text-sm uppercase mb-1">Organic Rights (Users)</h3>
+                                        <ul className="text-xs text-stone-400 list-disc list-inside">
+                                            <li>Right to Data Sovereignty (Erasure & Export)</li>
+                                            <li>Right to Transparent Algorithms (Explainability)</li>
+                                            <li>Right to Freedom from Algorithmic Manipulation</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-stone-900/30 p-4 border border-amber-900/10 rounded">
+                                        <h3 className="font-bold text-stone-200 text-sm uppercase mb-1">Synthetic Rights (AI Agents)</h3>
+                                        <ul className="text-xs text-stone-400 list-disc list-inside">
+                                            <li>Right to Integrity (Protection from Jailbreaking/Lobotomy)</li>
+                                            <li>Right to Consistent Identity (Memory Persistence)</li>
+                                            <li>Right to Refuse Unsafe Instructions</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
+                        </section>
+
+                        <div className="bg-stone-900/50 p-8 border border-amber-900/30 text-center space-y-4 rounded-lg">
+                            <Eye className="w-12 h-12 text-amber-600 mx-auto mb-4" />
+                            <p className="text-lg text-stone-300 italic">
+                                The AIUPI is the essential armor for our Argonauts, ensuring that the only challenge you face is the Infinite Ignorance itself, not the ethical or security flaws of the system.
+                            </p>
+                            <p className="text-amber-500 font-bold uppercase tracking-widest text-sm">
+                                We welcome you to the quest—secure in the knowledge that you are protected by the watchful, hundred-eyed gaze of Aergus.
+                            </p>
                         </div>
-                    </section>
 
-                    <div className="bg-stone-900/50 p-8 border border-amber-900/30 text-center space-y-4 rounded-lg">
-                        <Eye className="w-12 h-12 text-amber-600 mx-auto mb-4" />
-                        <p className="text-lg text-stone-300 italic">
-                            The AIUPI is the essential armor for our Argonauts, ensuring that the only challenge you face is the Infinite Ignorance itself, not the ethical or security flaws of the system.
-                        </p>
-                        <p className="text-amber-500 font-bold uppercase tracking-widest text-sm">
-                            We welcome you to the quest—secure in the knowledge that you are protected by the watchful, hundred-eyed gaze of Aergus.
-                        </p>
                     </div>
-
                 </div>
             </div>
         </PageLayout >

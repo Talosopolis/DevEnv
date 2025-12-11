@@ -1,22 +1,23 @@
 import React, { ReactNode } from 'react';
 import { LivingBackground } from './LivingBackground';
 import { QuotesTicker } from '../QuotesTicker';
-// Re-using the landing quotes or page specific quotes?
-// Ideally, the ticker quotes might change per page, so we should accept them as props.
-// But first, let's just make the layout structure.
 
 interface PageLayoutProps {
-    children: ReactNode;
-    quotes: { text: string; author: string }[];
-    showTicker?: boolean;
+    children: React.ReactNode;
+    className?: string;
+    quotes?: { text: string; author: string }[];
     faint?: boolean;
+    showTicker?: boolean;
+    backgroundOriginY?: number;
+    backgroundOriginX?: number;
+    backgroundRef?: React.MutableRefObject<{ x: number, y: number } | null>;
 }
 
-export function PageLayout({ children, quotes, showTicker = true, faint = false }: PageLayoutProps) {
+export function PageLayout({ children, faint = false, quotes = [], showTicker = true, backgroundOriginY, backgroundOriginX, backgroundRef }: PageLayoutProps) {
     return (
-        <div className="relative h-screen w-full font-serif text-amber-500 overflow-y-auto overflow-x-hidden selection:bg-amber-900 selection:text-amber-100 scroll-smooth">
+        <div className="relative min-h-screen font-sans text-stone-200 selection:bg-amber-900/30 selection:text-amber-100 overflow-x-hidden">
             {/* 1. Background Layer */}
-            <LivingBackground faint={faint} />
+            <LivingBackground faint={faint} originY={backgroundOriginY} originX={backgroundOriginX} backgroundRef={backgroundRef} />
 
             {/* 2. Content Layer */}
             <div className="relative z-10 flex flex-col min-h-screen">

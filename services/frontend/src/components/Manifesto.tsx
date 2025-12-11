@@ -19,27 +19,25 @@ export function Manifesto({ onBack }: { onBack: () => void }) {
     return (
         <PageLayout quotes={QUOTES}>
             <div className="relative z-20 min-h-screen text-amber-500 font-serif p-8 md:p-12 flex flex-col">
-                <div className="max-w-4xl mx-auto relative flex-grow w-full">
+                <div className="w-full max-w-5xl mx-auto relative flex-grow">
                     <Button
                         variant="ghost"
                         onClick={onBack}
-                        className="mb-12 text-stone-500 hover:text-amber-500 hover:bg-stone-900 uppercase tracking-widest text-xs flex items-center gap-2 group animate-pulse-glow"
+                        className="mb-8 text-stone-500 hover:text-amber-500 hover:bg-stone-900 uppercase tracking-widest text-xs flex items-center gap-2 group animate-pulse-glow transition-all"
                     >
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Return to the City
                     </Button>
 
-                    <header className="mb-24 text-center space-y-6 animate-breathe">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 1 }}
-                            className="w-24 h-24 mx-auto mb-8 border border-amber-900/30 rotate-45 flex items-center justify-center bg-stone-900/50"
-                        >
-                            <Scroll className="w-12 h-12 text-amber-600 -rotate-45" />
-                        </motion.div>
-                        <h1 className="text-4xl md:text-6xl font-bold tracking-[0.2em] text-stone-200">THE HERO</h1>
-                        <p className="text-xl text-stone-500 italic max-w-2xl mx-auto">"The odyssey of human existence has always been defined by our pursuit of knowledge."</p>
-                    </header>
+                    <div className="w-full h-48 md:h-64 overflow-hidden border-y border-amber-900/30 mb-24 relative group">
+                        <div className="absolute inset-0 bg-gradient-to-t from-stone-950 to-transparent z-10" />
+                        <img src="/hero_quest_1765388498720.png" alt="The Hero" className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-700" />
+                        <div className="absolute bottom-4 left-6 md:left-12 z-20">
+                            <h2 className="text-3xl md:text-5xl font-bold text-stone-200 uppercase tracking-widest drop-shadow-lg flex items-center gap-4 mb-2">
+                                <Scroll className="w-10 h-10 text-amber-500" /> THE HERO
+                            </h2>
+                            <p className="text-amber-500/80 tracking-wider text-sm md:text-base uppercase pl-1">The Odyssey of Knowledge</p>
+                        </div>
+                    </div>
 
                     <div className="space-y-24 leading-loose text-lg text-stone-400 font-light mb-24">
 

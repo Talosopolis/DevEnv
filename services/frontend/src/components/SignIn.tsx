@@ -10,7 +10,7 @@ const LOGIN_QUOTES = [
     { text: "Step into the light.", author: "Talos Protocol" }
 ];
 
-export function SignIn({ onBack, initialMode = 'signin' }: { onBack: () => void, initialMode?: 'signin' | 'signup' }) {
+export function SignIn({ onBack, onSuccess, initialMode = 'signin' }: { onBack: () => void, onSuccess: () => void, initialMode?: 'signin' | 'signup' }) {
     const { signIn, signUp, isLoading, bypassAuth } = useAuth();
     const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
     const [name, setName] = useState("");
@@ -24,7 +24,7 @@ export function SignIn({ onBack, initialMode = 'signin' }: { onBack: () => void,
             console.log("DEBUG: Calling AuthContext.signIn()");
             await signIn();
             console.log("DEBUG: AuthContext.signIn() returned");
-            onBack();
+            onSuccess();
         } catch (e: any) {
             console.error("Login failed", e);
             setError(e.message || "Failed to sign in. Check console.");
@@ -38,7 +38,7 @@ export function SignIn({ onBack, initialMode = 'signin' }: { onBack: () => void,
 
         try {
             await signUp(name, role);
-            onBack();
+            onSuccess();
         } catch (e) {
             setError("Failed to create account.");
         }
@@ -175,7 +175,7 @@ export function SignIn({ onBack, initialMode = 'signin' }: { onBack: () => void,
                             <div className="mt-4 text-red-500 text-xs text-center border border-red-900/30 bg-red-950/20 p-2 uppercase tracking-wide">
                                 <p className="mb-2">{error}</p>
                                 <button
-                                    onClick={() => { bypassAuth(); onBack(); }}
+                                    onClick={() => { bypassAuth(); onSuccess(); }}
                                     className="w-full bg-red-900/40 hover:bg-red-800/40 text-red-200 text-[10px] py-2 px-2 border border-red-500/30 uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
                                 >
                                     <Hexagon className="w-3 h-3" />

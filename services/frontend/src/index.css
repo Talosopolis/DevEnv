@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer utilities {
+  .font-talos-header {
+    font-family: 'Space Mono', monospace !important;
+  }
+
   .animate-breathe {
     animation: breathe 6s ease-in-out infinite;
   }

@@ -199,11 +199,37 @@ class FirebaseDatabaseService implements DatabaseInterface {
             console.log("STEP 2: Popup Complete. User:", result.user.email);
             const firebaseUser = result.user;
 
+            // Timeout helper
+            const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+                return new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => {
+                        console.warn(`Timeout waiting for ${label}`);
+                        reject(new Error(`Timeout: ${label}`));
+                    }, ms);
+
+                    promise
+                        .then(value => {
+                            clearTimeout(timer);
+                            resolve(value);
+                        })
+                        .catch(err => {
+                            clearTimeout(timer);
+                            reject(err);
+                        });
+                });
+            };
+
             // Check if user exists in DB, if not create basic record
             console.log("STEP 3: Checking Firestore Profile...");
             let userDoc;
             try {
-                userDoc = await getDoc(doc(this.db, "users", firebaseUser.uid));
+                // Wait max 4 seconds for Firestore. If it hangs (e.g. not enabled, rules block), fail fast.
+                userDoc = await withTimeout(
+                    getDoc(doc(this.db, "users", firebaseUser.uid)),
+                    4000,
+                    "Firestore Profile Check"
+                );
+
                 console.log("STEP 4: Firestore Check Complete. Exists:", userDoc.exists());
 
                 if (userDoc.exists()) {
@@ -211,7 +237,7 @@ class FirebaseDatabaseService implements DatabaseInterface {
                     return userDoc.data() as User;
                 }
             } catch (fsError) {
-                console.warn("Firestore offline/failed during sign-in:", fsError);
+                console.warn("Firestore offline/failed/timed-out during sign-in:", fsError);
                 console.log("STEP 4 (Fallback): Continuing without Firestore profile...");
             }
 
@@ -229,10 +255,15 @@ class FirebaseDatabaseService implements DatabaseInterface {
 
             // Try to save to DB, but ignore if it fails
             try {
-                await setDoc(doc(this.db, "users", firebaseUser.uid), newUser);
+                // Also timeout the save
+                await withTimeout(
+                    setDoc(doc(this.db, "users", firebaseUser.uid), newUser),
+                    3000,
+                    "Firestore Profile Create"
+                );
                 console.log("STEP 6: User Stub Saved to DB");
             } catch (dbSaveError) {
-                console.warn("Could not save user to DB (Offline):", dbSaveError);
+                console.warn("Could not save user to DB (Offline/Timeout):", dbSaveError);
             }
 
             return newUser;

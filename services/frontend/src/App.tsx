@@ -7,7 +7,7 @@ import { GraduationCap, BookOpen, Gamepad2, Upload, FileType, Search, Hexagon, Q
 import { Toaster } from "./components/ui/sonner";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import { SignIn } from "./components/SignIn";
-import { LandingPage } from "./components/LandingPage";
+import { LandingView } from "./components/LandingView";
 import { Manifesto } from "./components/Manifesto";
 import { Covenant } from "./components/Covenant";
 import { Library } from "./components/Library";
@@ -185,7 +185,7 @@ function AppContent() {
 
   // --- VIEW ROUTING ---
   if (currentView === 'landing') {
-    return <LandingPage
+    return <LandingView
       onLogin={() => navigateTo('signin')}
       onRegister={() => navigateTo('signin')}
       onHeroClick={() => navigateTo('manifesto')}
@@ -197,7 +197,7 @@ function AppContent() {
   }
 
   if (currentView === 'signin') {
-    return <SignIn onBack={() => navigateTo('landing')} />;
+    return <SignIn onBack={() => navigateTo('landing')} onSuccess={() => navigateTo('dashboard')} />;
   }
 
   // Manifesto / Covenant / Library / Game static pages
