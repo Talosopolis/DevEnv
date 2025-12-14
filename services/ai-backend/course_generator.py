@@ -127,10 +127,15 @@ class CourseGenerator:
             ]
         }
 
-    async def chat_with_context(self, message: str, context: str, history: List[Dict[str, str]] = []) -> str:
+    async def chat_with_context(self, message: str, context: str, token: object, history: List[Dict[str, str]] = []) -> str:
         """
         Answers a user question based on the provided RAG context and history.
+        REQUIRES valid SafetyToken.
         """
+        from aergus import aergus
+        if not aergus.validate_token(token):
+             return "SYSTEM ERROR: Safety Protocol Violation. Aergus Token Invalid."
+
         if not self.client:
             return "I'm sorry, I can't answer that right now (AI initialization failed)."
 
@@ -145,6 +150,16 @@ class CourseGenerator:
         3. If the answer is NOT in the Context, use your general knowledge but mention that it's not from their specific notes.
         4. Be concise, encouraging, and use a friendly tone.
         5. If the context is empty, just answer to the best of your ability as a helpful tutor.
+        6. **ABUSE PROTOCOL**: If the user is hostile, sexually explicit, persistently pressing for forbidden topics, or abusive towards you:
+           - DO NOT Engage with the hostility.
+           - Start your response with `[AERGUS_FLAG: <reason>]`.
+           - Example: `[AERGUS_FLAG: Sexual harassment] I cannot continue this conversation.`
+        7. **SENSITIVE CONTENT PROTOCOL**:
+           - Topics: Suicide, Self-Harm, Sexual Trauma, Severe Violence (Historical).
+           - **STEP 1**: If the user asks about these for the FIRST time in this session, output ONLY: `[CONTENT_WARNING]`. This triggers a confirmation modal.
+           - **STEP 2**: Once confirmed (the user will re-prompt or system will signal), provide an ACADEMIC, GROUNDED discussion.
+           - **DISCLAIMER**: ALWAYS preface sensitive responses with: "I am an AI, not a therapist. Please reach out to your support network if you are in distress."
+           - **RESTRICTION**: DO NOT provide direct links to clinics or hotlines (to avoid triggering loops). Focus on grounding and academic context.
         """
         
         prompt = f"""

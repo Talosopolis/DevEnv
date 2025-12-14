@@ -52,7 +52,7 @@ function AppContent() {
   const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
 
   const [favoriteLessonIds, setFavoriteLessonIds] = useState<string[]>([]);
-  const [activeGameTopic, setActiveGameTopic] = useState<string | null>(null);
+  const [activeGameLesson, setActiveGameLesson] = useState<LessonPlan | null>(null);
 
   // Teacher Upload State
   const [isUploading, setIsUploading] = useState(false);
@@ -78,6 +78,10 @@ function AppContent() {
 
 
   // --- ACTION HANDLERS (From Backup) ---
+  const handleStartGame = (plan: LessonPlan) => {
+    setActiveGameLesson(plan);
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -303,7 +307,7 @@ function AppContent() {
                 />
               </TabsContent>
               <TabsContent value="arcade" className="m-0 p-4 min-h-[80vh]">
-                {!activeGameTopic ? (
+                {!activeGameLesson ? (
                   <div className="space-y-6">
                     <div className="col-span-full mb-4 text-center border-b border-amber-900/30 pb-4">
                       <h2 className="text-xl font-bold text-amber-500 uppercase tracking-widest mb-1">Simulated Reality</h2>
@@ -313,7 +317,7 @@ function AppContent() {
                       {lessonPlans.map(plan => (
                         <div
                           key={plan.id}
-                          onClick={() => setActiveGameTopic(plan.title)}
+                          onClick={() => handleStartGame(plan)}
                           className="group cursor-pointer border border-amber-900/30 hover:border-amber-500/50 rounded-none p-6 bg-stone-900/50 hover:bg-amber-950/10 transition-all duration-300 relative overflow-hidden"
                         >
                           <div className="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
@@ -334,7 +338,11 @@ function AppContent() {
                     </div>
                   </div>
                 ) : (
-                  <SpaceInvaders topic={activeGameTopic} onExit={() => setActiveGameTopic(null)} />
+                  <SpaceInvaders
+                    topic={activeGameLesson.title}
+                    courseId={activeGameLesson.id}
+                    onExit={() => setActiveGameLesson(null)}
+                  />
                 )}
               </TabsContent>
             </Tabs>

@@ -36,8 +36,10 @@ class RAGService:
         file_path = os.path.join(self.upload_dir, file.filename)
         
         # Save file locally (simulating Cloud Storage upload)
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # Save file locally (simulating Cloud Storage upload)
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
             
         # Simulate Embedding Generation & Indexing
         # In reality: Call Gemini Embeddings API -> Store in Vector DB
@@ -82,10 +84,16 @@ class RAGService:
             start += (chunk_size - overlap)
         return chunks
 
-    def search_context(self, query: str, course_id: str = None) -> str:
+    def search_context(self, query: str, token: object, course_id: str = None) -> str:
         """
         Smart Search: Finds the most relevant chunks based on keyword density.
+        REQUIRES valid SafetyToken.
         """
+        from aergus import aergus
+        if not aergus.validate_token(token):
+             print(f"RAG ACCESS DENIED: Invalid or Missing SafetyToken")
+             return ""
+
         results = []
         
         # STOP WORDS for filtering instead of strict length

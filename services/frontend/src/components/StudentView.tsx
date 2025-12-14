@@ -668,43 +668,28 @@ export function StudentView({
       </TabsContent>
 
       {/* Bottom Navigation */}
-      <TabsList className="fixed bottom-0 left-0 right-0 w-full flex rounded-none border-t border-amber-900/30 bg-stone-950/95 backdrop-blur-sm h-16 shadow-[0_-5px_20px_rgba(0,0,0,0.5)] z-50">
-        <TabsTrigger
-          value="lessons"
-          className="gap-1 flex-col h-full flex-1 data-[state=active]:text-amber-500 text-stone-600 rounded-none transition-colors hover:text-amber-500/70 data-[state=active]:bg-transparent"
-        >
-          <BookOpen className="w-5 h-5" />
-          <span className="text-[10px] uppercase tracking-widest font-bold">Lessons</span>
+      <TabsList className="fixed bottom-0 left-0 right-0 max-w-md mx-auto flex rounded-none border-t bg-white h-16 shadow-lg">
+        <TabsTrigger value="lessons" className="gap-1 flex-col h-full flex-1">
+          <BookOpen className="w-4 h-4" />
+          <span className="text-xs">Lessons</span>
         </TabsTrigger>
-        <TabsTrigger
-          value="notes"
-          className="gap-1 flex-col h-full flex-1 data-[state=active]:text-amber-500 text-stone-600 rounded-none transition-colors hover:text-amber-500/70 data-[state=active]:bg-transparent"
-        >
-          <FileText className="w-5 h-5" />
-          <span className="text-[10px] uppercase tracking-widest font-bold">Notes</span>
+        <TabsTrigger value="notes" className="gap-1 flex-col h-full flex-1">
+          <FileText className="w-4 h-4" />
+          <span className="text-xs">Notes</span>
         </TabsTrigger>
-        <TabsTrigger
-          value="ai"
-          className="gap-1.5 flex-col h-full flex-[1.5] data-[state=active]:bg-transparent"
-        >
-          <div className="w-14 h-14 bg-amber-600 rounded-full flex items-center justify-center -mt-8 shadow-[0_0_15px_rgba(217,119,6,0.5)] border-4 border-stone-950 transition-transform hover:scale-105 hover:bg-amber-500">
-            <Bot className="w-7 h-7 text-stone-950" />
+        <TabsTrigger value="ai" className="gap-1.5 flex-col h-full flex-[1.5] bg-gradient-to-b from-green-50 to-transparent">
+          <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center -mt-6 shadow-lg border-4 border-white">
+            <Bot className="w-6 h-6 text-white" />
           </div>
-          <span className="text-[10px] uppercase tracking-widest font-bold text-amber-500 -mt-1">AI Node</span>
+          <span className="text-xs -mt-1">AI</span>
         </TabsTrigger>
-        <TabsTrigger
-          value="favorites"
-          className="gap-1 flex-col h-full flex-1 data-[state=active]:text-amber-500 text-stone-600 rounded-none transition-colors hover:text-amber-500/70 data-[state=active]:bg-transparent"
-        >
-          <Heart className="w-5 h-5" />
-          <span className="text-[10px] uppercase tracking-widest font-bold">Favs</span>
+        <TabsTrigger value="favorites" className="gap-1 flex-col h-full flex-1">
+          <Heart className="w-4 h-4" />
+          <span className="text-xs">Favorites</span>
         </TabsTrigger>
-        <TabsTrigger
-          value="games"
-          className="gap-1 flex-col h-full flex-1 data-[state=active]:text-amber-500 text-stone-600 rounded-none transition-colors hover:text-amber-500/70 data-[state=active]:bg-transparent"
-        >
-          <Gamepad2 className="w-5 h-5" />
-          <span className="text-[10px] uppercase tracking-widest font-bold">Sim</span>
+        <TabsTrigger value="games" className="gap-1 flex-col h-full flex-1">
+          <Gamepad2 className="w-4 h-4" />
+          <span className="text-xs">Games</span>
         </TabsTrigger>
       </TabsList>
 

@@ -9,13 +9,6 @@ import { Send, Bot, User, Save, Plus, ThumbsUp, ThumbsDown, Clock, X, BookOpen, 
 import { toast } from "sonner@2.0.3";
 import { Alert, AlertDescription } from "./ui/alert";
 import { generateSmartResponse, CitationSource } from "../utils/aiResponseHelper";
-// Import styles for KaTeX
-import 'katex/dist/katex.min.css';
-import ReactMarkdown from 'react-markdown';
-import rehypeKatex from 'rehype-katex';
-import remarkMath from 'remark-math';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
 
 type AIAssistantProps = {
   lessonPlans: LessonPlan[];
@@ -500,8 +493,7 @@ export function AIAssistant({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage.content,
-          history: messages.map(m => ({ role: m.role, content: m.content })).slice(-5), // Send last 5 messages for context
-          course_id: "default" // Use global context for now to match uploads
+          history: messages.map(m => ({ role: m.role, content: m.content })).slice(-5) // Send last 5 messages for context
         })
       });
 
@@ -533,266 +525,219 @@ export function AIAssistant({
   };
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-240px)] bg-stone-950 border-amber-900/30 shadow-[0_0_30px_rgba(251,191,36,0.05)] rounded-none relative overflow-hidden">
-      {/* Decorative Grid Background */}
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 pointer-events-none"></div>
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(120,53,15,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(120,53,15,0.03)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
-
-      <CardHeader className="pb-3 border-b border-amber-900/20 bg-stone-950/80 backdrop-blur-sm z-10 shrink-0">
+    <Card className="flex flex-col h-[calc(100vh-240px)]">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 font-mono text-sm uppercase tracking-widest text-amber-500">
-            <div className={`w-2 h-2 rounded-full ${isTyping ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`} />
-            TALOS_AI_NODE // V.2.5
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="w-5 h-5" />
+            AI Study Assistant
           </CardTitle>
           <div className="flex gap-2">
             {!showNameInput && studentName && loadedConversation && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNewConversation}
-                className="h-7 text-[10px] uppercase tracking-widest bg-stone-900 border-stone-800 text-stone-400 hover:text-amber-500 hover:border-amber-500/50 rounded-none transition-all"
-              >
+              <Button variant="outline" size="sm" onClick={handleNewConversation}>
                 <Plus className="w-3 h-3 mr-1" />
-                Reset
+                New
               </Button>
             )}
           </div>
         </div>
         {loadedConversation && (
-          <p className="text-[10px] font-mono text-stone-600 mt-1 uppercase tracking-wider">
-            Log Timestamp: {new Date(loadedConversation.timestamp).toLocaleDateString()}
+          <p className="text-xs text-gray-500 mt-1">
+            Conversation from {new Date(loadedConversation.timestamp).toLocaleDateString()}
           </p>
         )}
         {conversationId && !loadedConversation && messages.length > 1 && (
-          <p className="text-[10px] font-mono text-amber-900/70 mt-1 flex items-center gap-1 uppercase tracking-wider">
-            <Save className="w-3 h-3" />
-            Auto-Archived
+          <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            Auto-saved
           </p>
         )}
       </CardHeader>
-
-      <CardContent className="flex-1 flex flex-col gap-3 p-0 relative z-0 overflow-hidden">
+      <CardContent className="flex-1 flex flex-col gap-3 p-0">
         {/* Draft Alert */}
         {showDraftAlert && draftConversation && (
-          <div className="px-4 pt-4">
-            <div className="border border-amber-500/30 bg-amber-950/20 p-3 flex items-center justify-between gap-2">
-              <div className="flex-1">
-                <p className="text-xs font-mono text-amber-500 uppercase tracking-wide">
-                  ⚠ Partial Transmission Found
-                </p>
-                <p className="text-[10px] text-stone-500 font-mono mt-0.5">
-                  {new Date(draftConversation.timestamp).toLocaleString()} • {draftConversation.messages.length} packets
-                </p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Button size="sm" onClick={handleRestoreDraft} className="h-6 text-[10px] bg-amber-900/40 hover:bg-amber-900/60 text-amber-500 border border-amber-900/50 rounded-none uppercase">
-                  Recover
-                </Button>
-                <Button size="sm" variant="ghost" onClick={handleDismissDraft} className="h-6 w-6 p-0 text-stone-500 hover:text-stone-300 rounded-none">
-                  <X className="w-3 h-3" />
-                </Button>
-              </div>
-            </div>
+          <div className="px-4">
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertDescription className="flex items-center justify-between gap-2">
+                <div className="flex-1">
+                  <p className="text-sm">
+                    <strong>Draft found!</strong> You have an unsaved conversation from{" "}
+                    {new Date(draftConversation.timestamp).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {draftConversation.messages.length} messages
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button size="sm" onClick={handleRestoreDraft}>
+                    Restore
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={handleDismissDraft}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
           </div>
         )}
 
         {/* Name Input */}
         {showNameInput ? (
-          <div className="px-4 py-12 text-center space-y-6 flex flex-col items-center justify-center h-full">
-            <div className="relative">
-              <div className="w-20 h-20 border border-amber-500/30 rounded-full flex items-center justify-center mx-auto animate-[spin_10s_linear_infinite]">
-                <div className="w-16 h-16 border border-dashed border-amber-500/20 rounded-full opacity-50" />
-              </div>
-              <Bot className="w-8 h-8 text-amber-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+          <div className="px-4 py-8 text-center space-y-4">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+              <Bot className="w-8 h-8 text-green-700" />
             </div>
             <div>
-              <h3 className="text-lg font-bold font-mono text-amber-500 uppercase tracking-widest mb-2">Identify Yourself</h3>
-              <p className="text-xs text-stone-500 font-mono uppercase tracking-wide">
-                Clearance Code Required
+              <h3 className="text-lg mb-2">Welcome to AI Study Assistant</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Please enter your name to get started
               </p>
             </div>
-            <div className="space-y-3 w-full max-w-xs">
+            <div className="space-y-2">
               <Input
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSetName()}
-                placeholder="ENTER_DESIGNATION..."
-                className="bg-stone-900 border-amber-900/30 text-amber-500 placeholder:text-amber-900/30 font-mono text-xs text-center rounded-none focus:border-amber-500/70 h-10 tracking-widest"
+                placeholder="Your name"
+                className="max-w-xs mx-auto"
               />
-              <Button
-                onClick={handleSetName}
-                disabled={!nameInput.trim()}
-                className="w-full bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold font-mono rounded-none uppercase tracking-widest text-xs h-10"
-              >
-                Initialize Link
+              <Button onClick={handleSetName} disabled={!nameInput.trim()}>
+                Start Chat
               </Button>
             </div>
           </div>
         ) : (
           <>
-            {/* Custom Scroll Container */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-stone-800 scrollbar-track-transparent hover:scrollbar-thumb-amber-900/50">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  {message.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-none border border-amber-900/30 bg-stone-900 flex items-center justify-center shrink-0 mt-1">
-                      <Bot className="w-4 h-4 text-amber-600" />
-                    </div>
-                  )}
+            <ScrollArea className="flex-1 px-4">
+              <div className="space-y-4 pb-4">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex gap-2 ${message.role === "user" ? "justify-end" : "justify-start"
+                      }`}
+                  >
+                    {message.role === "assistant" && (
+                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                        <Bot className="w-4 h-4 text-green-700" />
+                      </div>
+                    )}
+                    <div className={`flex-1 ${message.role === "user" ? "flex justify-end" : ""}`}>
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-2 ${message.role === "user"
+                            ? "bg-green-700 text-white"
+                            : "bg-gray-100 text-gray-900"
+                          }`}
+                      >
+                        <p className="text-sm whitespace-pre-line">{message.content}</p>
+                        {message.editedByTeacher && (
+                          <Badge variant="secondary" className="mt-2 text-xs">
+                            Reviewed by teacher
+                          </Badge>
+                        )}
 
-                  <div className={`flex-1 max-w-[85%] flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={`relative px-5 py-4 text-sm font-mono leading-relaxed shadow-lg backdrop-blur-sm
-                        ${message.role === "user"
-                          ? "bg-amber-950/30 text-amber-100 border-l-2 border-amber-600 rounded-r-lg rounded-tl-lg"
-                          : "bg-stone-900/80 text-stone-300 border-l-2 border-stone-600 rounded-r-lg rounded-bl-lg"
-                        }`}
-                    >
-                      {/* Technical Header */}
-                      <div className="text-[9px] uppercase tracking-widest mb-2 opacity-50 flex items-center gap-2 select-none">
-                        {message.role === "user" ? '>> USR_INPUT' : '>> SYS_RESPONSE'}
-                        <span className="w-full h-px bg-current opacity-20" />
+                        {/* Clickable Citation */}
+                        {message.citation && message.citation.lessonPlanId && (
+                          <div className="mt-3 pt-2 border-t border-gray-200">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto p-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 w-full justify-start"
+                              onClick={() => {
+                                if (message.citation?.lessonPlanId) {
+                                  onNavigateToLesson?.(message.citation.lessonPlanId);
+                                  toast.success(`Opening ${message.citation.lessonPlanTitle}`);
+                                }
+                              }}
+                            >
+                              <BookOpen className="w-3 h-3 mr-1 shrink-0" />
+                              <span className="text-left">
+                                View this lesson: {message.citation.lessonPlanTitle}
+                              </span>
+                            </Button>
+                          </div>
+                        )}
+
+                        {message.relatedPlans && message.relatedPlans.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <p className="text-xs text-gray-500 mb-1">Related lessons:</p>
+                            {message.relatedPlans.map((planTitle, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs mr-1 mb-1">
+                                {planTitle}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
-                      <div className="prose prose-invert prose-stone max-w-none prose-p:leading-relaxed prose-pre:bg-stone-950 prose-pre:border prose-pre:border-stone-800">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
-                          rehypePlugins={[rehypeKatex]}
-                          components={{
-                            p: ({ node, ...props }) => <p className="whitespace-pre-wrap mb-2 last:mb-0" {...props} />,
-                            a: ({ node, ...props }) => <a className="text-amber-500 hover:underline" {...props} />,
-                            code: ({ node, className, children, ...props }) => {
-                              const match = /language-(\w+)/.exec(className || '')
-                              return match ? (
-                                <code className={`${className} bg-stone-950 px-1 py-0.5 rounded text-amber-200`} {...props}>
-                                  {children}
-                                </code>
-                              ) : (
-                                <code className="bg-stone-950 px-1 py-0.5 rounded text-amber-500 text-xs" {...props}>
-                                  {children}
-                                </code>
-                              )
-                            }
-                          }}
-                        >
-                          {message.content}
-                        </ReactMarkdown>
-                      </div>
-
-                      {message.editedByTeacher && (
-                        <div className="mt-2 text-[9px] text-amber-500/70 flex items-center gap-1 uppercase tracking-wider border-t border-amber-500/10 pt-1">
-                          <User className="w-3 h-3" /> MAGISTER_OVERRIDE
-                        </div>
-                      )}
-
-                      {/* Clickable Citation */}
-                      {message.citation && message.citation.lessonPlanId && (
-                        <div className="mt-4 pt-3 border-t border-stone-800/50">
+                      {/* Rating buttons for assistant messages */}
+                      {message.role === "assistant" && !message.id.startsWith("welcome") && (
+                        <div className="flex gap-1 mt-1 ml-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-auto p-2 text-[10px] text-amber-500 hover:text-amber-400 hover:bg-amber-950/30 w-full justify-start font-mono rounded-none border border-amber-900/20"
-                            onClick={() => {
-                              if (message.citation?.lessonPlanId) {
-                                onNavigateToLesson?.(message.citation.lessonPlanId);
-                                toast.success(`Accessing Archive: ${message.citation.lessonPlanTitle}`);
-                              }
-                            }}
+                            className={`h-6 px-2 ${message.rating === "helpful"
+                                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                : "text-gray-400 hover:text-green-600"
+                              }`}
+                            onClick={() => handleRating(message.id, "helpful")}
                           >
-                            <BookOpen className="w-3 h-3 mr-2 shrink-0" />
-                            <span className="text-left uppercase tracking-wide truncate">
-                              Ref: {message.citation.lessonPlanTitle}
-                            </span>
+                            <ThumbsUp className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-6 px-2 ${message.rating === "not-helpful"
+                                ? "bg-red-100 text-red-700 hover:bg-red-200"
+                                : "text-gray-400 hover:text-red-600"
+                              }`}
+                            onClick={() => handleRating(message.id, "not-helpful")}
+                          >
+                            <ThumbsDown className="w-3 h-3" />
                           </Button>
                         </div>
                       )}
-
-                      {message.relatedPlans && message.relatedPlans.length > 0 && (
-                        <div className="mt-3 pt-2 border-t border-stone-800/50">
-                          <p className="text-[9px] text-stone-500 mb-2 uppercase tracking-widest">Linked Archives:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {message.relatedPlans.map((planTitle, idx) => (
-                              <div key={idx} className="text-[10px] px-2 py-0.5 bg-stone-950 border border-stone-800 text-stone-400 font-mono rounded-none">
-                                {planTitle}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
-
-                    {/* Rating buttons */}
-                    {message.role === "assistant" && !message.id.startsWith("welcome") && (
-                      <div className="flex flex-col gap-1 ml-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleRating(message.id, "helpful")}
-                          className={`p-1 hover:bg-stone-800 rounded-none transition-colors ${message.rating === "helpful" ? "text-amber-500" : "text-stone-600"}`}
-                        >
-                          <ThumbsUp className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={() => handleRating(message.id, "not-helpful")}
-                          className={`p-1 hover:bg-stone-800 rounded-none transition-colors ${message.rating === "not-helpful" ? "text-red-500" : "text-stone-600"}`}
-                        >
-                          <ThumbsDown className="w-3 h-3" />
-                        </button>
+                    {message.role === "user" && (
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                        <User className="w-4 h-4 text-gray-600" />
                       </div>
                     )}
                   </div>
+                ))}
 
-                  {message.role === "user" && (
-                    <div className="w-8 h-8 rounded-none border border-amber-500/30 bg-amber-950/30 flex items-center justify-center shrink-0 mt-1">
-                      <User className="w-4 h-4 text-amber-500" />
+                {isTyping && (
+                  <div className="flex gap-2 justify-start">
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                      <Bot className="w-4 h-4 text-green-700" />
                     </div>
-                  )}
-                </div>
-              ))}
-
-              {isTyping && (
-                <div className="flex gap-3 justify-start animate-pulse">
-                  <div className="w-8 h-8 rounded-none border border-amber-900/30 bg-stone-900 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-amber-600" />
-                  </div>
-                  <div className="bg-stone-900 border-l-2 border-stone-600 px-5 py-4 rounded-r-lg rounded-bl-lg">
-                    <div className="flex gap-1">
-                      <div className="w-1.5 h-1.5 bg-amber-600 rounded-none animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <div className="w-1.5 h-1.5 bg-amber-600 rounded-none animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <div className="w-1.5 h-1.5 bg-amber-600 rounded-none animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <div className="bg-gray-100 rounded-2xl px-4 py-2">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-              <div ref={scrollRef} className="h-4" /> {/* Spacer at bottom */}
-            </div>
+                )}
+                <div ref={scrollRef} />
+              </div>
+            </ScrollArea>
 
-            <div className="p-4 bg-stone-950/90 border-t border-amber-900/20 backdrop-blur-md sticky bottom-0 z-20">
-              <div className="flex gap-2 relative group">
-                {/* Glowing border effect */}
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-900/0 via-amber-500/20 to-amber-900/0 opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
-
+            <div className="px-4 pb-4">
+              <div className="flex gap-2">
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder="QUERY_DATABASE..."
-                  className="flex-1 bg-stone-900 border-stone-800 text-stone-200 placeholder:text-stone-700 font-mono text-sm h-11 rounded-none px-4 focus:border-amber-500/50 focus:ring-0 focus:bg-stone-900 transition-colors uppercase tracking-wide"
+                  placeholder="Ask a question about your lessons..."
+                  className="flex-1"
                 />
-                <Button
-                  onClick={handleSend}
-                  size="icon"
-                  disabled={!input.trim()}
-                  className="h-11 w-11 rounded-none bg-stone-900 border border-stone-800 hover:bg-amber-950 hover:border-amber-500/50 hover:text-amber-500 text-stone-500 transition-all"
-                >
+                <Button onClick={handleSend} size="icon" disabled={!input.trim()}>
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-[9px] text-stone-700 mt-2 text-center font-mono uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                <span className="w-1 h-1 bg-amber-900 rounded-full animate-pulse" />
-                Talos_Network_Status: CONNECTED
-                <span className="w-1 h-1 bg-amber-900 rounded-full animate-pulse" />
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                AI responses are based on available lesson plans and study notes
               </p>
             </div>
           </>

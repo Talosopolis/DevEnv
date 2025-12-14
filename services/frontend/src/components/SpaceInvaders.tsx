@@ -5,6 +5,7 @@ import { AlertTriangle, Shield, Zap, Skull, Crosshair, Info, RefreshCw, Key, Hel
 // --- Types ---
 interface SpaceInvadersProps {
     topic: string;
+    courseId?: string;
     onExit: () => void;
 }
 
@@ -53,7 +54,7 @@ const CONFIG = {
     }
 }
 
-const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
+const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null)
 
     // --- State ---
@@ -154,7 +155,6 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
             })
         }
     }
-
     const loadNextQuestion = useCallback(async (overrideDiff?: Difficulty, nextIndex?: number) => {
         const currentDiff = overrideDiff || difficulty
         const targetIndex = nextIndex !== undefined ? nextIndex : questionCount
@@ -180,6 +180,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     topic,
+                    course_id: courseId,
                     difficulty: currentDiff === 'STREAMER' ? 'spartan' : currentDiff.toLowerCase(),
                     question_index: targetIndex,
                     previous_questions: seenQuestions.current
@@ -297,6 +298,10 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
         }, 1000)
     }
 
+    // --- Anti-Cheat State ---
+    const inputHistory = useRef<number[]>([])
+    const corruptionMode = useRef(false)
+
     // --- Input ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -304,6 +309,37 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
 
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault()
+
+            // ANTI-CHEAT MONITOR (Telemetry V2)
+            const now = Date.now()
+            inputHistory.current.push(now)
+            if (inputHistory.current.length > 50) {
+                inputHistory.current.shift()
+
+                // Periodically check with backend (every 10th input after buffer full)
+                if (Math.random() > 0.9 && !corruptionMode.current) {
+                    fetch('http://localhost:8000/analyze-telemetry', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: "anonymous_cadet", // In real app, use auth context
+                            telemetry: inputHistory.current
+                        })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.is_anomaly) {
+                                console.warn("AERGUS DETECTED ANOMALY:", data.reason, data.stats)
+                                corruptionMode.current = true
+                                setGameState('playing')
+                                setDifficulty('STREAMER')
+                                setFeedbackMessage(`⚠️ ANOMALY: ${data.reason} ⚠️`)
+                            }
+                        })
+                        .catch(console.error)
+                }
+            }
+
 
             if (e.code === 'KeyR') startGame(difficulty)
             if (e.code === 'KeyX') setAutoRestart(prev => !prev)
@@ -767,6 +803,26 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, onExit }) => {
 
             // LOOP
             if (gameState === 'playing') {
+                if (corruptionMode.current) {
+                    // ZALGO / CORRUPTION FX
+                    ctx.save()
+                    ctx.globalCompositeOperation = 'difference'
+                    if (Math.random() > 0.8) {
+                        ctx.fillStyle = '#ff0000'
+                        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+                    }
+                    if (Math.random() > 0.9) {
+                        ctx.translate(Math.random() * 10 - 5, Math.random() * 10 - 5)
+                    }
+                    ctx.restore()
+
+                    // Corrupt Enemy Text
+                    enemies.current.forEach(e => {
+                        if (Math.random() > 0.9) {
+                            e.text = e.text.split('').map(c => String.fromCharCode(c.charCodeAt(0) + Math.random() * 50)).join('')
+                        }
+                    })
+                }
                 requestId.current = requestAnimationFrame(render)
             }
         }
