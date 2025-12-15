@@ -24,3 +24,8 @@ dist/
 
 # OS
 .DS_Store
+*.log
+check_*.py
+debug_*.py
+SpaceInvaders_OLD.tsx
+SpaceInvadersClean.tsx
