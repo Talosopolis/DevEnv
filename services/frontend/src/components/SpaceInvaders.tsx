@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, Shield, Zap, Skull, Crosshair, Info, RefreshCw, Key, HelpCircle, EyeOff } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 
 // --- Types ---
 interface SpaceInvadersProps {
@@ -61,6 +65,19 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
     const [gameState, setGameState] = useState<GameState>('menu')
     const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM')
     const [score, setScore] = useState(0)
+
+    // --- New Features (Restored from Iteration) ---
+    const [practiceMode, setPracticeMode] = useState(false)
+    const [qDiffIndex, setQDiffIndex] = useState(0)
+    const QUESTION_DIFF_LEVELS = [1, 1.5, 3, 5]
+    const [highScores, setHighScores] = useState<{ name: string, score: number, difficulty: string }[]>([
+        { name: "SoloMan", score: 62500, difficulty: "STREAMER" },
+        { name: "HaramABeef", score: 58000, difficulty: "STREAMER" },
+        { name: "Thaumiel", score: 45000, difficulty: "HARD" },
+        { name: "Keter", score: 32000, difficulty: "HARD" },
+        { name: "Euclid", score: 12000, difficulty: "MEDIUM" }
+    ])
+
     const [displayScore, setDisplayScore] = useState(0)
     const scoreRef = useRef(0)
     const seenQuestions = useRef<string[]>([])
@@ -106,6 +123,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
     const SHIELD_RECHARGE = 100 / (15 * 60)
 
     // Countdown State
+    const [isCountingDown, setIsCountingDown] = useState(false)
     const countdown = useRef<number | null>(null)
 
     // Constants
@@ -175,13 +193,18 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
         isTransitioning.current = false
 
         try {
+            // Force Fallback if Practice Mode is Enabled
+            if (practiceMode) throw new Error("Practice Mode Enabled")
+
             const res = await fetch('http://localhost:8000/generate-quiz', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     topic,
+                    dataset: 'default', // Using default dataset for now
                     course_id: courseId,
-                    difficulty: currentDiff === 'STREAMER' ? 'spartan' : currentDiff.toLowerCase(),
+                    // Map Slider (0-3) to API Difficulty
+                    difficulty: ['easy', 'medium', 'hard', 'spartan'][qDiffIndex] || 'medium',
                     question_index: targetIndex,
                     previous_questions: seenQuestions.current
                 })
@@ -220,33 +243,232 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
         } catch (err) {
             console.warn("Using fallback question due to error:", err)
 
+            // Notify user if this wasn't intentional
+            if (!practiceMode && courseId) {
+                setFeedbackMessage("⚠ CONNECTION UNSTABLE // ENGAGING EMERGENCY PROTOCOLS");
+            }
+
             // Generate Random Math Problem for Fallback
-            const ops = ['+', '-', '*'];
-            const op = ops[Math.floor(Math.random() * ops.length)];
-            let a = Math.floor(Math.random() * 12) + 1;
-            let b = Math.floor(Math.random() * 12) + 1;
+            // SCALED BY QUESTION COMPLEXITY
+            const complexity = qDiffIndex // 0, 1, 2, 3
+            let questionText = ""
+            let answer = 0
+            let distractors: number[] = []
 
-            // Simplify subtraction to non-negative
-            if (op === '-' && a < b) [a, b] = [b, a];
+            // NOTE: Outputting valid LaTeX for ReactMarkdown rendering.
 
-            const questionText = `${a} ${op} ${b} = ?`;
-            let answer = 0;
-            if (op === '+') answer = a + b;
-            if (op === '-') answer = a - b;
-            if (op === '*') answer = a * b;
+            // STANDARD: Arith (Mental Math: +, -, *, /) - 2 DIGIT (10-99)
+            if (complexity === 0) {
+                const type = Math.floor(Math.random() * 4);
+                const limit = 90; // 10 to 99
+                let a = Math.floor(Math.random() * limit) + 10;
+                let b = Math.floor(Math.random() * limit) + 10;
 
-            // Generate Options
+                if (type === 0) { // Add
+                    answer = a + b;
+                    questionText = `$${a} + ${b} = ?$`;
+                    distractors = [a + b + 10, a + b - 10, a + b + 1, a + b + 2];
+                } else if (type === 1) { // Sub
+                    if (a < b) [a, b] = [b, a];
+                    answer = a - b;
+                    questionText = `$${a} - ${b} = ?$`;
+                    distractors = [a - b + 10, a - b - 1, a + b, b - a];
+                } else if (type === 2) { // Mult (Smaller range for mental 10s think)
+                    a = Math.floor(Math.random() * 8) + 12; // 12-19
+                    b = Math.floor(Math.random() * 8) + 3; // 3-10
+                    answer = a * b;
+                    questionText = `$${a} \\times ${b} = ?$`;
+                    distractors = [a * b + a, a * b - b, a * b + 10, (a + 1) * b];
+                } else { // Div
+                    b = Math.floor(Math.random() * 8) + 4;
+                    answer = Math.floor(Math.random() * 15) + 5;
+                    a = answer * b;
+                    questionText = `$${a} \\div ${b} = ?$`;
+                    distractors = [answer + 1, answer - 1, answer + 2, Math.floor(answer / 2)];
+                }
+            }
+
+            // ADVANCED: Algebra 2 (Conics, Matrices, Vectors, Sums) w/ Tricky Distractors
+            else if (complexity === 1) {
+                const type = Math.floor(Math.random() * 6);
+
+                if (type === 0) { // Parabola Focus
+                    const p = Math.floor(Math.random() * 5) + 1;
+                    answer = p;
+                    questionText = `Focus of $x^2 = ${4 * p}y$. find coordinate $(0, ?)$`;
+                    distractors = [-p, 4 * p, p * 2, p + 1];
+                } else if (type === 1) { // Discriminant: b^2 - 4ac
+                    const a = Math.floor(Math.random() * 5) + 1;
+                    const c = Math.floor(Math.random() * 5) + 1;
+                    const b = Math.floor(Math.random() * 8) + 3;
+                    answer = b * b - 4 * a * c;
+                    questionText = `Discriminant $\\Delta$ of $${a}x^2 + ${b}x + ${c} = 0$`;
+                    distractors = [b * b + 4 * a * c, b * b, 2 * b, Math.abs(b * b - 2 * a * c)];
+                } else if (type === 2) { // Dot Product
+                    const u1 = Math.floor(Math.random() * 5); const u2 = Math.floor(Math.random() * 5);
+                    const v1 = Math.floor(Math.random() * 5); const v2 = Math.floor(Math.random() * 5);
+                    answer = u1 * v1 + u2 * v2;
+                    questionText = `$\\langle ${u1},${u2} \\rangle \\cdot \\langle ${v1},${v2} \\rangle = ?$`;
+                    distractors = [u1 * v2 - u2 * v1, u1 + v1 + u2 + v2, u1 * v1, u1 * v1 - u2 * v2];
+                } else if (type === 3) { // Determinant
+                    const a = Math.floor(Math.random() * 5); const b = Math.floor(Math.random() * 5);
+                    const c = Math.floor(Math.random() * 5); const d = Math.floor(Math.random() * 5);
+                    answer = a * d - b * c;
+                    questionText = `$\\det \\begin{vmatrix} ${a} & ${b} \\\\ ${c} & ${d} \\end{vmatrix} = ?$`;
+                    distractors = [a * d + b * c, b * c - a * d, a * c - b * d, a * d];
+                } else if (type === 4) { // Summation
+                    const k = Math.floor(Math.random() * 3) + 3;
+                    const c = Math.floor(Math.random() * 3) + 1;
+                    let sum = 0; for (let i = 1; i <= k; i++) sum += c * i;
+                    answer = sum;
+                    questionText = `$\\sum_{n=1}^{${k}} ${c}n = ?$`;
+                    distractors = [sum - c * k, sum + c * (k + 1), c * k * k, Math.floor(sum / 2)];
+                } else { // Slope
+                    const m = Math.floor(Math.random() * 5) + 2;
+                    const A = m; const C = Math.floor(Math.random() * 10);
+                    answer = m;
+                    questionText = `Slope of $${A}x - y = ${C}$`;
+                    distractors = [-A, Math.floor(10 / A) / 10, -Math.floor(10 / A) / 10, A + 1];
+                }
+            }
+
+            // EXPERT: Geometry Honors (Full Course)
+            else if (complexity === 2) {
+                const type = Math.floor(Math.random() * 7); // Increased type count
+
+                if (type === 0) { // Parallel Lines (Alternate Interior)
+                    // Distractor: Same Side Interior (Supplementary)
+                    const angle = (Math.floor(Math.random() * 12) + 3) * 10;
+                    answer = angle;
+                    questionText = `$L_1 \\parallel L_2$. $\\angle A=${angle}^\\circ$. Find Alt. Int. $\\angle B$.`;
+                    distractors = [180 - angle, 90 - angle, angle + 10, angle / 2];
+                } else if (type === 1) { // Same-Side Interior
+                    const angle = (Math.floor(Math.random() * 12) + 3) * 10;
+                    answer = 180 - angle;
+                    questionText = `$L_1 \\parallel L_2$. $\\angle A=${angle}^\\circ$. Find Same-Side Int $\\angle B$.`;
+                    distractors = [angle, 90 + angle, Math.abs(90 - angle), 180 + angle];
+                } else if (type === 2) { // Centroids (Median segments)
+                    // Centroid divides median in 2:1 ratio.
+                    // Given whole median M = 3x. Find longer seg (2x).
+                    const x = Math.floor(Math.random() * 5) + 2;
+                    const total = 3 * x;
+                    answer = 2 * x;
+                    questionText = `Centroid $G$. Median $AM = ${total}$. Find $AG$ (Vertex to Centroid).`;
+                    // Distractors: x (Short seg), total/2, total
+                    distractors = [x, total / 2, total - x - 1, x * 3];
+                } else if (type === 3) { // Isosceles (Trickier Distractors)
+                    const vertex = (Math.floor(Math.random() * 8) + 2) * 10; // e.g. 30
+                    answer = (180 - vertex) / 2; // e.g. 75
+                    questionText = `Isosceles: Vertex=${vertex}$^\\circ$. Base $\\angle = ?$`;
+                    // Distractors: 
+                    // 1. "30-60-90" fallacy -> 60
+                    // 2. Arithmetic error -> 65
+                    // 3. Forget to divide -> 150 (180-30)
+                    distractors = [60, answer - 10, 180 - vertex, 90 - (vertex / 2)];
+                } else if (type === 4) { // Polygon Ext Angle
+                    const n = 6;
+                    answer = 60;
+                    questionText = `Regular Hexagon. Each Ext $\\angle = ?$`;
+                    distractors = [120, 360, 30, 90];
+                } else if (type === 5) { // SAS/SSS Logic (Conceptual)
+                    // Given AB=DE, BC=EF... what missing for SAS?
+                    // Angle B = Angle E.
+                    // Hard to format textually. Let's do a logic check.
+                    // "Triangle Inequality: Sides 3, 7, x. Min Integer x?"
+                    // x + 3 > 7 -> x > 4. Min int = 5.
+                    const s1 = Math.floor(Math.random() * 5) + 3;
+                    const s2 = s1 + Math.floor(Math.random() * 5) + 2;
+                    // s1 + x > s2 -> x > s2 - s1
+                    const limit_lower = s2 - s1;
+                    answer = limit_lower + 1;
+                    questionText = `Triangle Sides: $${s1}, ${s2}, x$. Min Integer $x$?`;
+                    distractors = [limit_lower, limit_lower - 1, s1 + s2, s2];
+                } else { // Circle Area (in terms of pi)
+                    const r = Math.floor(Math.random() * 6) + 2;
+                    answer = r * r;
+                    questionText = `Circle $r=${r}$. Area = $X\\pi$. $X=?$`;
+                    distractors = [2 * r, r, r * r * r, r + 2];
+                }
+            }
+
+            // ELITE: AP Calculus BC / Undergrad (Harder & Tricky)
+            else {
+                const type = Math.floor(Math.random() * 7);
+
+                if (type === 0) { // Chain Rule: d/dx e^(ax).
+                    const a = Math.floor(Math.random() * 5) + 2;
+                    answer = a;
+                    questionText = `$\\frac{d}{dx} (e^{${a}x} + \\cos(x))$ at $x=0$`;
+                    distractors = [1, 0, Math.exp(a), a + 1];
+                } else if (type === 1) { // Product Rule: x * e^x at x=1.
+                    const c = Math.floor(Math.random() * 3) + 2; // 2, 3, 4
+                    const x_val = 2;
+                    answer = 3 * c * x_val * x_val;
+                    questionText = `$\\frac{d}{dx} (x^2 \\cdot ${c}x)$ at $x=${x_val}$`;
+                    const wrong1 = c * Math.pow(x_val, 3); // Integral-ish
+                    const wrong2 = 2 * x_val * c; // Bad prod rule
+                    distractors = [wrong1, wrong2, answer / x_val, answer + c];
+                } else if (type === 2) { // Definite Integral
+                    const upper = Math.floor(Math.random() * 3) + 2;
+                    const k = Math.floor(Math.random() * 3) + 1;
+                    answer = k * Math.pow(upper, 3);
+                    questionText = `$\\int_{0}^{${upper}} ${3 * k}x^2 \\, dx$`;
+                    distractors = [6 * k * upper, k * Math.pow(upper, 2), k * Math.pow(upper, 4) / 4, answer + upper];
+                } else if (type === 3) { // Log Derivatives
+                    const k = Math.floor(Math.random() * 6) + 2;
+                    const x_val = k;
+                    answer = 1;
+                    questionText = `$\\frac{d}{dx} \\ln(x^{${k}})$ at $x=${k}$`;
+                    distractors = [k, 0, k * k, 1 / k];
+                } else if (type === 4) { // Limits L'Hopital
+                    const k = (Math.floor(Math.random() * 4) + 1) * 2; // 2, 4, 6, 8
+                    answer = k / 2;
+                    questionText = `$\\lim_{x \\to 0} \\frac{\\sin(${k}x)}{2x}$`;
+                    distractors = [k, 0, 1, k * 2];
+                } else if (type === 5) { // Quotient Concept
+                    answer = 1;
+                    questionText = `$\\frac{d}{dx} \\left(\\frac{x}{x+1}\\right)$ at $x=0$`;
+                    distractors = [0, -1, 2, 0.5];
+                } else { // Trig (Unit Circle)
+                    const queries = [
+                        { fn: '\\sin', ang: 30, ans: 0.5, d: [0.866, -0.5, 0] }, // sin30=1/2. Wrong: cos30, -sin30
+                        { fn: '\\cos', ang: 60, ans: 0.5, d: [0.866, -0.5, 1] },
+                        { fn: '\\sin', ang: 210, ans: -0.5, d: [0.5, -0.866, -1] }, // 3rd quad
+                        { fn: '\\cos', ang: 120, ans: -0.5, d: [0.5, -0.866, -1] }, // 2nd quad
+                        { fn: '\\tan', ang: 135, ans: -1, d: [1, 0, -0.5] },
+                        { fn: '\\csc', ang: 30, ans: 2, d: [0.5, -2, 1] }, // 1/sin(30) = 1/(0.5) = 2. Wrong: 0.5 (sin)
+                        { fn: '\\sec', ang: 120, ans: -2, d: [-0.5, 2, -1] },
+                        { fn: '\\cot', ang: 45, ans: 1, d: [-1, 0, 0.5] }
+                    ];
+                    const q = queries[Math.floor(Math.random() * queries.length)];
+                    answer = q.ans;
+                    questionText = `$${q.fn}(${q.ang}^\\circ) = ?$`;
+                    distractors = q.d;
+                }
+            }
+
+            setCurrentQuestion(questionText)
             const options = new Set<number>();
             options.add(answer);
+
+            // Add Smart Distractors first
+            distractors.forEach(d => {
+                // Ensure distinct and not equal to answer
+                if (Math.abs(d - answer) > 0.001) {
+                    // Check if float, round to 2 decimals if needed, but we mostly use ints/halves
+                    options.add(d);
+                }
+            });
+
+            // Fill remaining with Random Offsets
             while (options.size < 4) {
                 const offset = Math.floor(Math.random() * 10) - 5;
-                const wrong = answer + offset;
-                if (wrong !== answer && wrong >= 0) options.add(wrong);
+                if (offset !== 0) options.add(answer + offset);
             }
-            const shuffledOptions = Array.from(options).sort(() => Math.random() - 0.5);
+            const shuffledOptions = Array.from(options).slice(0, 4).sort(() => Math.random() - 0.5);
             const correctIndex = shuffledOptions.indexOf(answer);
 
-            setCurrentQuestion(`OFFLINE MODE: ${questionText}`)
+            setCurrentQuestion(questionText)
             const config = (CONFIG as any)[currentDiff]
             const s = config.enemySpeed * 1.2
 
@@ -268,7 +490,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
             enemies.current = newEnemies
             if (overrideDiff) setGameState('playing')
         }
-    }, [questionCount, questionsCorrect, topic, difficulty])
+    }, [questionCount, questionsCorrect, topic, difficulty, qDiffIndex, practiceMode])
 
     const startGame = async (diff: Difficulty) => {
         setDifficulty(diff)
@@ -286,12 +508,14 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
         await loadNextQuestion(diff, 0)
 
         setGameState('playing')
+        setIsCountingDown(true)
         countdown.current = 3
         const countInt = setInterval(() => {
             if (countdown.current !== null) {
                 countdown.current -= 1
                 if (countdown.current <= 0) {
                     countdown.current = null
+                    setIsCountingDown(false)
                     clearInterval(countInt)
                 }
             }
@@ -317,37 +541,28 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                 inputHistory.current.shift()
 
                 // Periodically check with backend (every 10th input after buffer full)
+                // DISABLED BY USER REQUEST
+                /*
                 if (Math.random() > 0.9 && !corruptionMode.current) {
                     fetch('http://localhost:8000/analyze-telemetry', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            user_id: "anonymous_cadet", // In real app, use auth context
-                            telemetry: inputHistory.current
-                        })
+                        // ...
                     })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.is_anomaly) {
-                                console.warn("AERGUS DETECTED ANOMALY:", data.reason, data.stats)
-                                corruptionMode.current = true
-                                setGameState('playing')
-                                setDifficulty('STREAMER')
-                                setFeedbackMessage(`⚠️ ANOMALY: ${data.reason} ⚠️`)
-                            }
-                        })
-                        .catch(console.error)
+                    // ...
                 }
+                */
             }
 
 
             if (e.code === 'KeyR') startGame(difficulty)
             if (e.code === 'KeyX') setAutoRestart(prev => !prev)
-            if (['KeyM', 'KeyP', 'Escape'].includes(e.code)) {
+            if (e.code === 'KeyM' || e.code === 'KeyP') {
                 if (gameState !== 'menu') {
                     bgWarp.current = { val: 0, target: 0, color: '#1e293b', bloom: 0, flood: { color: '', opacity: 0 }, type: 'NORMAL', direction: 1 }
                     setGameState('menu')
                 }
+            }
+            if (e.code === 'Escape') {
+                onExit()
             }
 
             keys.current[e.code] = true
@@ -363,12 +578,46 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
 
     // Auto Restart Loop
     useEffect(() => {
-        let timeout: NodeJS.Timeout
+        let timeout: ReturnType<typeof setTimeout>
         if (gameState === 'gameover' && autoRestart) {
             timeout = setTimeout(() => startGame(difficulty), 3000)
         }
         return () => clearTimeout(timeout)
     }, [gameState, autoRestart, difficulty])
+
+    // Load High Scores from LocalStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('SPACE_INVADERS_SCORES_V2');
+        if (saved) {
+            try {
+                setHighScores(JSON.parse(saved));
+            } catch (e) { console.error("Failed to load scores", e) }
+        }
+    }, [])
+
+    const updateHighScores = (finalScore: number) => {
+        setHighScores(prev => {
+            const currentBest = Math.max(...prev.filter(h => h.name === 'OPERATIVE').map(h => h.score), 0);
+            if (finalScore > currentBest) {
+                setFeedbackMessage(`NEW RECORD SET: ${finalScore.toLocaleString()} ⊼`);
+                // Trigger extra fanfare or sound?
+                shakeIntensity.current = 20;
+            }
+
+            const newScores = [...prev, { name: "OPERATIVE", score: finalScore, difficulty: difficulty }];
+            newScores.sort((a, b) => b.score - a.score);
+            const top5 = newScores.slice(0, 5);
+            localStorage.setItem('SPACE_INVADERS_SCORES_V2', JSON.stringify(top5));
+            return top5;
+        });
+    }
+
+    // Update High Score on Game End
+    useEffect(() => {
+        if (gameState === 'victory' || gameState === 'gameover') {
+            if (score > 0) updateHighScores(score);
+        }
+    }, [gameState])
 
     // Victory Counter Animation
     useEffect(() => {
@@ -560,6 +809,14 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
 
                 setHealth(h => Math.min(100, h + 0.05))
 
+                // Question Text is now handled by the React Overlay above the canvas
+                // ctx.shadowColor = '#22d3ee'
+                // ctx.shadowBlur = 10
+                // ctx.fillStyle = '#22d3ee'
+                // ctx.font = '24px "Share Tech Mono", monospace'
+                // ctx.textAlign = 'center'
+                // ctx.fillText(currentQuestion, canvas.width / 2, 80)
+
                 // Countdown
                 if (countdown.current !== null) {
                     ctx.fillStyle = '#fbbf24'
@@ -624,14 +881,17 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                     }
                 }
 
+                // Calculate Current Multiplier Once
+                const currentMult = diffConfig.scoreMult * QUESTION_DIFF_LEVELS[qDiffIndex] * (practiceMode ? 0 : 1)
+
                 // Ammo Penalty
                 if (shotsRemaining <= 0 && bullets.current.filter(b => b.active).length === 0 && !isTransitioning.current) {
                     isTransitioning.current = true
                     setHealth(h => Math.max(0, h - 25)); // Penalty
-                    const penalty = 200
+                    const penalty = 200 * currentMult
                     scoreRef.current = Math.max(0, scoreRef.current - penalty)
                     setScore(scoreRef.current)
-                    setFeedbackMessage(`AMMO DEPLETED! -${penalty} pts`)
+                    setFeedbackMessage(`AMMO DEPLETED! -${penalty.toFixed(0)} pts`)
                     shakeIntensity.current = 10
                     // Red Flood
                     if (!reducedMotion) { bgWarp.current = { ...bgWarp.current, val: 1.0, target: 0, type: 'GLITCH', flood: { color: '#ef4444', opacity: 0.6 }, color: '#ef4444', bloom: 60 } }
@@ -691,9 +951,8 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                     else if (b.type === 'SINE') { b.y += Math.abs(b.vy) * 0.8; b.x = b.initialX + Math.sin(b.y * 0.03) * 60 }
                     else if (b.type === 'TRACKING') { b.y += Math.abs(b.vy) * 0.7; if (b.x < playerX.current) b.x += 1.5; else b.x -= 1.5 }
                     else if (b.type === 'PIERCING') {
-                        let dx = playerX.current - b.x; if (Math.abs(dx) > CANVAS_WIDTH / 2) { if (dx > 0) dx -= CANVAS_WIDTH; else dx += CANVAS_WIDTH }
-                        const angle = Math.atan2((CANVAS_HEIGHT - 50) - b.y, dx); b.vx += Math.cos(angle) * 0.1; b.vy += Math.sin(angle) * 0.1
-                        const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy); if (speed > 3) { b.vx *= 0.95; b.vy *= 0.95 }; b.x += b.vx; b.y += b.vy
+                        // Piercing moves straight but maintains velocity logic (no homing)
+                        b.x += b.vx; b.y += b.vy
                     }
                     else if (b.type === 'CLUSTER') {
                         b.x += b.vx; b.y += b.vy; if (b.y > CANVAS_HEIGHT * 0.45) {
@@ -712,13 +971,14 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                             bullet.active = false; createExplosion(bullet.x, bullet.y, enemy.isCorrect ? '#22d3ee' : '#ef4444'); shakeIntensity.current = 5
                             if (enemy.isCorrect) {
                                 enemy.active = false
-                                const points = 250 * diffConfig.scoreMult
+                                // Score = Base * GameDiff * QDiff
+                                const points = 250 * currentMult
                                 scoreRef.current += points
                                 setScore(scoreRef.current)
                                 const nextQ = questionCount + 1
                                 setQuestionsCorrect(q => q + 1)
                                 setQuestionCount(nextQ)
-                                setFeedbackMessage(`TARGET NEUTRALIZED +${points}`)
+                                setFeedbackMessage(`TARGET NEUTRALIZED +${points.toFixed(0)}`)
                                 enemies.current.forEach(e => e.active = false)
                                 isTransitioning.current = true
                                 // Green Flood
@@ -735,8 +995,11 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                                 }
                                 loadNextQuestion(undefined, nextQ)
                             } else {
-                                setHealth(h => Math.max(0, h - 20)); setFeedbackMessage("INCORRECT TARGET! HULL DAMAGED"); shakeIntensity.current = 15
-                                scoreRef.current = Math.max(0, scoreRef.current - 50); setScore(scoreRef.current)
+                                setHealth(h => Math.max(0, h - 20));
+                                shakeIntensity.current = 15
+                                const penalty = 50 * currentMult
+                                scoreRef.current = Math.max(0, scoreRef.current - penalty); setScore(scoreRef.current)
+                                setFeedbackMessage(`INCORRECT TARGET! -${penalty.toFixed(0)} pts`);
                                 if (!reducedMotion) { bgWarp.current = { ...bgWarp.current, val: 1.0, target: 0, type: 'GLITCH', flood: { color: '#ef4444', opacity: 0.5 }, color: '#ef4444', bloom: 50 } }
                             }
                         }
@@ -748,7 +1011,14 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                         bomb.active = false; createExplosion(bomb.x, bomb.y, '#06b6d4', 'SPARK'); return
                     }
                     if (dist < 25) {
-                        bomb.active = false; setHealth(h => { let dmg = difficulty === 'STREAMER' ? 40 : 15; if (bomb.type === 'PIERCING') dmg = 50; const next = Math.max(0, h - dmg); if (next <= 0) setGameState('gameover'); return next })
+                        bomb.active = false;
+                        setHealth(h => { let dmg = difficulty === 'STREAMER' ? 40 : 15; if (bomb.type === 'PIERCING') dmg = 50; const next = Math.max(0, h - dmg); if (next <= 0) setGameState('gameover'); return next })
+
+                        // "More Bullet Per Bullet" - Scaled Score Penalty
+                        const penalty = 100 * currentMult
+                        scoreRef.current = Math.max(0, scoreRef.current - penalty); setScore(scoreRef.current)
+                        setFeedbackMessage(`CRITICAL HIT! -${penalty.toFixed(0)} pts`)
+
                         const hitColor = bomb.type === 'PIERCING' ? '#facc15' : bomb.type === 'TRACKING' ? '#f87171' : '#ef4444'
                         createExplosion(playerX.current, CANVAS_HEIGHT - 35, hitColor, 'GLITCH')
                         shakeIntensity.current = 20
@@ -797,7 +1067,6 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                 ctx.fillStyle = '#334155'; ctx.fillRect(CANVAS_WIDTH - 220, CANVAS_HEIGHT - 30, 200, 10); ctx.fillStyle = shieldEnergy.current > 20 ? '#06b6d4' : '#ef4444'; ctx.fillRect(CANVAS_WIDTH - 220, CANVAS_HEIGHT - 30, (shieldEnergy.current / 100) * 200, 10); ctx.font = '10px monospace'; ctx.fillStyle = '#94a3b8'; ctx.fillText("SHIELD", CANVAS_WIDTH - 230, CANVAS_HEIGHT - 21)
                 for (let k = 0; k < MAX_AMMO; k++) { ctx.fillStyle = k < shotsRemaining ? '#22d3ee' : '#334155'; ctx.fillRect(CANVAS_WIDTH - 300 + (k * 20), CANVAS_HEIGHT - 25, 10, 15) }
                 ctx.fillStyle = '#22d3ee'; ctx.font = '10px monospace'; ctx.fillText("AMMO", CANVAS_WIDTH - 310, CANVAS_HEIGHT - 21)
-                ctx.fillStyle = '#22d3ee'; ctx.font = 'bold 18px "Courier New", monospace'; wrapText(ctx, currentQuestion, CANVAS_WIDTH / 2, 40, CANVAS_WIDTH - 100, 24)
                 if (feedbackMessage) { ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 20px "Courier New", monospace'; ctx.fillText(feedbackMessage, CANVAS_WIDTH / 2, CANVAS_HEIGHT - 120) }
             }
 
@@ -832,7 +1101,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
 
 
     return (
-        <div className="flex flex-col items-center justify-center p-4 min-h-screen bg-slate-950 font-mono text-cyan-400">
+        <div className="flex flex-col items-center justify-center p-4 min-h-screen bg-transparent font-mono text-cyan-400">
             {/* Header */}
             <div className="w-[800px] flex justify-between mb-2 text-sm border-b border-white/10 pb-2 uppercase tracking-widest">
                 <div className='flex gap-6 items-center'>
@@ -848,8 +1117,21 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                         </div>
                     </div>
                 </div>
-                <button onClick={onExit} className="hover:text-red-400">[M / ESC] ABORT</button>
+                <div className="flex gap-4">
+                    <button onClick={() => {
+                        bgWarp.current = { val: 0, target: 0, color: '#1e293b', bloom: 0, flood: { color: '', opacity: 0 }, type: 'NORMAL', direction: 1 }
+                        setGameState('menu')
+                    }} className="hover:text-cyan-400">[M] MENU</button>
+                    <button onClick={onExit} className="hover:text-red-400">[ESC] EXIT</button>
+                </div>
             </div>
+
+            {/* Web Page Header */}
+            {topic && (
+                <div className="w-full max-w-[800px] mx-auto mb-4 text-center">
+                    <h1 className="text-3xl font-bold text-cyan-500 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(6,182,212,0.5)]">{topic}</h1>
+                </div>
+            )}
 
             {/* Game Windows */}
             <div className="relative w-full max-w-[800px] aspect-[4/3] border-2 border-slate-700 bg-black rounded-xl overflow-hidden shadow-[0_0_50px_rgba(34,211,238,0.1)] box-border mx-auto">
@@ -858,23 +1140,68 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                 {gameState === 'menu' && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-transparent z-20 backdrop-blur-none">
 
-                        {/* Manual & Accessibility Buttons */}
+                        {/* Manual & Accessibility Buttons - SPLIT */}
                         {!showInstructions && (
-                            <div className="absolute bottom-8 right-8 flex flex-col items-end gap-3 z-30">
-                                <button
-                                    onClick={() => setReducedMotion(!reducedMotion)}
-                                    className={`flex items-center gap-2 px-3 py-1.5 border rounded-md transition-all text-[10px] tracking-widest uppercase ${reducedMotion ? 'bg-cyan-900/50 text-cyan-200 border-cyan-400' : 'bg-slate-900/50 text-slate-500 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/30'}`}
-                                >
-                                    <EyeOff size={12} /> {reducedMotion ? 'GREEBLES: OFF' : 'GREEBLES: ON'}
-                                </button>
+                            <>
+                                {/* Top Left: Manual */}
+                                <div className="absolute top-4 left-4 z-30">
+                                    <button
+                                        onClick={() => setShowInstructions(true)}
+                                        className="flex items-center gap-2 bg-slate-900/80 hover:bg-slate-800 text-cyan-400 px-4 py-2 border border-cyan-500/30 rounded-lg transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
+                                    >
+                                        <HelpCircle size={16} /> <span className="text-xs font-bold tracking-widest">MANUAL</span>
+                                    </button>
+                                </div>
 
-                                <button
-                                    onClick={() => setShowInstructions(true)}
-                                    className="flex items-center gap-2 bg-slate-900/80 hover:bg-slate-800 text-cyan-400 px-4 py-2 border border-cyan-500/30 rounded-lg transition-all shadow-[0_0_15px_rgba(6,182,212,0.1)] hover:shadow-[0_0_20px_rgba(6,182,212,0.3)]"
-                                >
-                                    <HelpCircle size={16} /> <span className="text-xs font-bold tracking-widest">MANUAL</span>
-                                </button>
-                            </div>
+                                {/* Top Right: Greebles & Leaderboard */}
+                                <div className="absolute top-4 right-4 z-30 flex flex-col items-end gap-2 text-right">
+                                    {/* Greebles Toggle */}
+                                    <button
+                                        onClick={() => setReducedMotion(!reducedMotion)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 border rounded-md transition-all text-[10px] tracking-widest uppercase mb-1 ${reducedMotion ? 'bg-cyan-900/50 text-cyan-200 border-cyan-400' : 'bg-slate-900/50 text-slate-500 border-slate-800 hover:text-cyan-400 hover:border-cyan-500/30'}`}
+                                    >
+                                        <EyeOff size={12} /> {reducedMotion ? 'GREEBLES: OFF' : 'GREEBLES: ON'}
+                                    </button>
+
+                                    {/* Top Operatives Dropdown Group */}
+                                    <div className="relative group">
+                                        <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/80 border border-slate-700 hover:border-cyan-500/50 text-slate-400 hover:text-cyan-400 rounded-md transition-all text-[10px] tracking-widest uppercase">
+                                            <span>TOP OPERATIVES</span> <span className="text-xs">▾</span>
+                                        </button>
+
+                                        {/* Dropdown Content */}
+                                        <div className="absolute right-0 top-full mt-2 w-56 bg-slate-900/95 border border-cyan-500/30 rounded-xl shadow-2xl backdrop-blur-md opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all transform translate-y-2 group-hover:translate-y-0 p-4 z-40">
+                                            <h3 className="text-cyan-400 font-bold tracking-widest border-b border-cyan-500/30 pb-2 mb-3 text-xs flex items-center justify-between">
+                                                <span>LEADERBOARD</span>
+                                                <span className="text-[10px] opacity-50">⊼</span>
+                                            </h3>
+
+                                            {/* List */}
+                                            <div className="space-y-3 mb-4">
+                                                {highScores.slice(0, 5).map((h, i) => (
+                                                    <div key={i} className="flex flex-col text-[10px] text-left">
+                                                        <div className="flex justify-between items-end mb-0.5">
+                                                            <span className={`font-bold truncate max-w-[120px] ${h.name === 'OPERATIVE' ? 'text-yellow-400' : 'text-slate-300'}`}>{h.name}</span>
+                                                            <span className="text-cyan-500 font-mono">{h.score.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="flex justify-between text-[9px] text-slate-600">
+                                                            <span className="uppercase">{h.difficulty}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* PERSONAL BEST */}
+                                            <div className="border-t border-slate-700 pt-3 text-center">
+                                                <div className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">PERSONAL HIGHEST</div>
+                                                <div className="text-xl font-bold text-yellow-500 font-mono tracking-wider drop-shadow-[0_0_10px_rgba(234,179,8,0.3)]">
+                                                    {Math.max(...highScores.filter(h => h.name === 'OPERATIVE').map(h => h.score), 0).toLocaleString()} <span className="text-[10px] text-yellow-700">⊼</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
                         )}
 
                         {showInstructions ? (
@@ -929,36 +1256,73 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                             </div>
                         ) : (
                             <>
-                                <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 mb-2 filter drop-shadow-[0_0_15px_rgba(6,182,212,0.8)]">
+                                <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-cyan-600 tracking-tighter mb-2 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)] uppercase">
                                     TALOS DEFENSE
                                 </h1>
-                                <p className="text-slate-400 tracking-[0.5em] text-sm mb-8">TACTICAL KNOWLEDGE SYSTEM</p>
+                                <p className="text-slate-400 tracking-[0.5em] text-sm mb-4">TACTICAL KNOWLEDGE SYSTEM</p>
 
-                                {/* VERTICAL MENU STACK */}
-                                <div className="flex flex-col gap-4 w-full max-w-md px-8 mb-8 z-20">
+                                {/* QUESTION DIFFICULTY & PRACTICE CONTROL */}
+                                <div className="flex flex-col items-center w-full max-w-md mb-4 p-3 bg-slate-900/50 border border-slate-700/50 rounded-lg">
+                                    <div className="flex justify-between w-full text-xs text-cyan-400 font-bold tracking-widest mb-2">
+                                        <span>QUESTION COMPLEXITY</span>
+                                        <span>x{QUESTION_DIFF_LEVELS[qDiffIndex]} MULTIPLIER</span>
+                                    </div>
+                                    <input
+                                        type="range" min="0" max="3" step="1"
+                                        value={qDiffIndex}
+                                        onChange={(e) => setQDiffIndex(parseInt(e.target.value))}
+                                        className="w-full accent-cyan-500 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer mb-4"
+                                    />
+                                    <div className="flex justify-between w-full text-[10px] text-slate-500 uppercase tracking-widest px-1">
+                                        <span>STD</span><span>ADV</span><span>EXP</span><span>ELITE</span>
+                                    </div>
+
+                                    {/* PRACTICE MODE GLOWING SIGN */}
+                                    <div className="mt-4 w-full flex flex-col items-center gap-1">
+                                        <button
+                                            onClick={() => setPracticeMode(!practiceMode)}
+                                            className={`w-full py-1.5 border rounded transition-all tracking-[0.2em] font-bold text-[10px] ${practiceMode ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300 shadow-[0_0_20px_rgba(99,102,241,0.4)]' : 'bg-slate-800 border-slate-600 text-slate-500 hover:border-slate-400'}`}
+                                        >
+                                            {practiceMode ? 'SIMULATION ACTIVE' : 'ENABLE SIMULATION'}
+                                        </button>
+                                        {practiceMode && (
+                                            <div className="text-[10px] text-indigo-400 animate-pulse tracking-widest">
+                                                ⚠ 0x REWARDS // TRAINING
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* GRID MENU STACK */}
+                                <div className="grid grid-cols-2 gap-4 w-full max-w-2xl px-4 mb-4 z-20">
                                     {Object.entries(CONFIG).map(([key, conf]) => (
                                         <button
                                             key={key}
-                                            onClick={() => startGame(key as Difficulty)}
-                                            className={`group relative p-4 border border-slate-700 hover:border-cyan-400 transition-all rounded-lg bg-slate-900/80 hover:bg-slate-800 flex items-center justify-between gap-4 overflow-hidden shadow-lg`}
+                                            onClick={() => {
+                                                console.log("Button Clicked:", key)
+                                                startGame(key as Difficulty)
+                                            }}
+                                            className={`group relative p-3 border border-slate-700 hover:border-cyan-400 transition-all rounded-lg bg-slate-900/80 hover:bg-slate-800 flex flex-col items-start justify-between h-32 overflow-hidden shadow-lg`}
                                         >
                                             <div className={`absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`} />
 
-                                            <div className="flex flex-col items-start">
-                                                <div className="flex items-baseline gap-3">
+                                            <div className="flex flex-col items-start w-full">
+                                                <div className="flex justify-between w-full items-baseline mb-1">
                                                     <span className={`text-2xl font-bold ${conf.color}`}>{conf.label}</span>
                                                     <span className="text-[10px] text-slate-500 bg-slate-800 px-2 py-0.5 rounded uppercase tracking-widest">{conf.subtitle}</span>
                                                 </div>
-                                                <div className="text-xs text-slate-400 mt-1">{conf.desc}</div>
+                                                <div className="text-[10px] text-slate-400 leading-tight text-left">{conf.desc}</div>
                                             </div>
 
-                                            <div className="flex flex-col items-end">
-                                                <span className="text-lg font-bold text-slate-200">x{conf.scoreMult}</span>
-                                                <span className="text-[10px] text-slate-500 uppercase tracking-widest">LEPTA</span>
+                                            <div className="flex w-full justify-between items-end mt-2 border-t border-slate-700/50 pt-2">
+                                                <span className="text-[10px] text-slate-500 uppercase tracking-widest">TOTAL MULTIPLIER</span>
+                                                <span className="text-xl font-black text-yellow-400 animate-pulse px-2 py-0.5 bg-yellow-900/20 border border-yellow-500/50 rounded shadow-[0_0_10px_rgba(250,204,21,0.2)]">x{(conf.scoreMult * QUESTION_DIFF_LEVELS[qDiffIndex] * (practiceMode ? 0 : 1)).toFixed(1)}</span>
                                             </div>
                                         </button>
                                     ))}
                                 </div>
+
+
                             </>
                         )}
                     </div>
@@ -974,6 +1338,26 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                     )
                 }
 
+                {/* LaTeX Question Overlay */}
+                {currentQuestion && gameState === 'playing' && !isCountingDown && (
+                    <div className="absolute top-8 left-1/2 transform -translate-x-1/2 
+                                  bg-slate-900/10 border border-cyan-500/30 px-6 py-4 rounded-xl
+                                  shadow-[0_0_30px_rgba(34,211,238,0.1)] backdrop-blur-sm z-10
+                                  w-[95%] text-center pointer-events-none">
+                        <div className="text-cyan-400 text-sm font-mono tracking-wider">
+                            <ReactMarkdown
+                                remarkPlugins={[remarkMath]}
+                                rehypePlugins={[rehypeKatex]}
+                                components={{
+                                    p: (props) => <p className="latex-math" {...props} />
+                                }}
+                            >
+                                {currentQuestion}
+                            </ReactMarkdown>
+                        </div>
+                    </div>
+                )}
+
                 {/* GAME OVER / VICTORY */}
                 {
                     (gameState === 'victory' || gameState === 'gameover') && (
@@ -984,7 +1368,7 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                                     <p className="text-green-900 tracking-widest mb-8 text-xl">PAYMENT SECURED</p>
 
                                     <div className="flex flex-col items-center gap-2 mb-8">
-                                        <div className="text-xs text-green-400 tracking-[0.5em] uppercase">Transferring Lepta...</div>
+                                        <div className="text-xs text-green-400 tracking-[0.5em] uppercase">Transferring ⊼...</div>
                                         <div className="text-5xl font-mono font-bold text-white tracking-widest tabular-nums">
                                             {displayScore.toLocaleString()}
                                         </div>
@@ -1000,14 +1384,14 @@ const SpaceInvaders: React.FC<SpaceInvadersProps> = ({ topic, courseId, onExit }
                                         <div className="text-4xl font-mono font-bold text-red-900/50 tracking-widest tabular-nums line-through">
                                             {score.toLocaleString()}
                                         </div>
-                                        <div className="text-lg text-red-500 font-bold mt-2">0 LEPTA SECURED</div>
+                                        <div className="text-lg text-red-500 font-bold mt-2">0 ⊼ SECURED</div>
                                     </div>
                                 </div>
                             )}
 
                             <div className="grid grid-cols-2 gap-8 mb-8 text-center">
                                 <div>
-                                    <p className="text-slate-500 text-xs tracking-widest mb-1">FINAL SCORE (Λ)</p>
+                                    <p className="text-slate-500 text-xs tracking-widest mb-1">FINAL SCORE (⊼)</p>
                                     <p className="text-4xl text-white font-bold">{displayScore}</p>
                                 </div>
                                 <div>

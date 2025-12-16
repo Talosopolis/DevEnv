@@ -5,7 +5,8 @@ import re
 import time
 import hashlib
 import uuid
-from typing import Tuple, Optional
+from datetime import datetime
+from typing import List, Dict, Optional, Tuple
 from pydantic import BaseModel
 
 # Tier 2 Dependencies
@@ -272,30 +273,80 @@ class Aergus:
         variance = sum((x - mean) ** 2 for x in deltas) / n
         std_dev = variance ** 0.5
         
+        # Kurtosis (Fourth Moment)
+        if std_dev > 0:
+            m4 = sum((x - mean) ** 4 for x in deltas) / n
+            kurtosis = m4 / (std_dev ** 4)
+        else:
+            kurtosis = 0
+        
         # --- THREAT DETECTION ---
         
         # 1. The "Perfect Machine" (Low Variance)
-        # Humans are jittery. Bots are precise.
-        # If standard deviation is improbably low (< 5ms), it's a macro or script.
         if std_dev < 5.0:
             self.report_user_action(user_id, "CHEATING", f"Inhuman Stability (StdDev: {std_dev:.2f}ms)")
             return {
                 "is_anomaly": True,
                 "reason": "INPUT_VARIANCE_TOO_LOW",
-                "stats": {"mean": mean, "std_dev": std_dev}
+                "stats": {"mean": mean, "std_dev": std_dev, "kurtosis": kurtosis}
             }
 
         # 2. The "Speed Demon" (Superhuman Speed)
-        # Sustained inputs faster than 50ms are physically impossible for humans over time.
-        if mean < 50.0:
+        # Average Human Tapping is ~75ms. We set the threshold to 40ms to avoid false positives.
+        if mean < 40.0:
              self.report_user_action(user_id, "CHEATING", f"Impossible Speed (Mean: {mean:.2f}ms)")
              return {
                 "is_anomaly": True,
                 "reason": "INPUT_RATE_IMPOSSIBLE",
-                "stats": {"mean": mean, "std_dev": std_dev}
+                "stats": {"mean": mean, "std_dev": std_dev, "kurtosis": kurtosis}
             }
 
-        return {"is_anomaly": False, "reason": "Pass", "stats": {"mean": mean, "std_dev": std_dev}}
+        # 3. The "Smart Bot" (Synthetic Randomness / Uniform Distribution)
+        # Random.uniform() has a Kurtosis of ~1.8 (Platykurtic).
+        # Human reactions are Leptokurtic (Peaked, > 3.0).
+        if kurtosis < 2.0:
+             self.report_user_action(user_id, "CHEATING", f"Synthetic Distribution (Kurtosis: {kurtosis:.2f})")
+             result = {
+                "is_anomaly": True,
+                "reason": "INPUT_DISTRIBUTION_UNNATURAL",
+                "stats": {"mean": mean, "std_dev": std_dev, "kurtosis": kurtosis}
+            }
+             self.log_telemetry(user_id, result)
+             return result
+
+        # 4. Finesse Score (Human Pauses & Micro-Adjustments)
+        # Humans "stop and think" (Interval > 300ms) and have "finesse errors" (Variance).
+        # Bots are continuous and consistent.
+        max_interval = max(deltas)
+        if max_interval < 300.0 and std_dev < 20.0:
+             self.report_user_action(user_id, "CHEATING", f"Zero Finesse (MaxInt: {max_interval:.2f}ms, StdDev: {std_dev:.2f}ms)")
+             result = {
+                "is_anomaly": True,
+                "reason": "LACK_OF_FINESSE",
+                "stats": {"mean": mean, "std_dev": std_dev, "kurtosis": kurtosis, "max_interval": max_interval}
+            }
+             self.log_telemetry(user_id, result)
+             return result
+            
+        result = {"is_anomaly": False, "reason": "Pass", "stats": {"mean": mean, "std_dev": std_dev, "kurtosis": kurtosis}}
+        self.log_telemetry(user_id, result)
+        return result
+
+    def log_telemetry(self, user_id: str, result: dict):
+        """Logs telemetry stats to a persistent JSONL file for calibration."""
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "user_id": user_id,
+            "stats": result["stats"],
+            "is_anomaly": result["is_anomaly"],
+            "reason": result["reason"]
+        }
+        
+        # Ensure data directory exists
+        os.makedirs("data", exist_ok=True)
+        
+        with open("data/telemetry.jsonl", "a") as f:
+            f.write(json.dumps(log_entry) + "\n")
 
 # Singleton Instance
 aergus = Aergus()

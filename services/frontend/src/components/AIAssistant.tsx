@@ -525,11 +525,11 @@ export function AIAssistant({
   };
 
   return (
-    <Card className="flex flex-col h-[calc(100vh-240px)]">
+    <Card className="flex flex-col h-[65vh] md:h-[calc(100vh-220px)] bg-stone-900/50 border-amber-900/30 rounded-none border-x-0 md:border-x border-b-0 md:border-b shadow-none md:shadow-2xl">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="w-5 h-5" />
+          <CardTitle className="flex items-center gap-2 text-stone-200 text-sm font-bold">
+            <Bot className="w-5 h-5 text-amber-500" />
             AI Study Assistant
           </CardTitle>
           <div className="flex gap-2">
@@ -542,37 +542,36 @@ export function AIAssistant({
           </div>
         </div>
         {loadedConversation && (
-          <p className="text-xs text-gray-500 mt-1">
-            Conversation from {new Date(loadedConversation.timestamp).toLocaleDateString()}
+          <p className="text-[10px] text-stone-500 mt-1 font-mono">
+            Log Date: {new Date(loadedConversation.timestamp).toLocaleDateString()}
           </p>
         )}
         {conversationId && !loadedConversation && messages.length > 1 && (
-          <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+          <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1 font-bold animate-pulse">
             <Clock className="w-3 h-3" />
-            Auto-saved
+            Auto-archiving...
           </p>
         )}
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-3 p-0">
+      <CardContent className="flex-1 flex flex-col min-h-0 p-0 overflow-hidden">
         {/* Draft Alert */}
         {showDraftAlert && draftConversation && (
-          <div className="px-4">
-            <Alert className="border-amber-200 bg-amber-50">
+          <div className="px-4 pt-3 shrink-0">
+            <Alert className="border-amber-500/50 bg-amber-950/30 text-amber-200 rounded-none">
               <AlertDescription className="flex items-center justify-between gap-2">
                 <div className="flex-1">
-                  <p className="text-sm">
-                    <strong>Draft found!</strong> You have an unsaved conversation from{" "}
-                    {new Date(draftConversation.timestamp).toLocaleString()}
+                  <p className="text-xs uppercase tracking-wide font-bold text-amber-500">
+                    UNSAVED LOG DETECTED
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    {draftConversation.messages.length} messages
+                  <p className="text-[10px] text-stone-400 mt-1 font-mono">
+                    TIMESTAMP: {new Date(draftConversation.timestamp).toLocaleString()} ({draftConversation.messages.length} ENTRIES)
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <Button size="sm" onClick={handleRestoreDraft}>
+                  <Button size="sm" onClick={handleRestoreDraft} className="bg-amber-700/20 hover:bg-amber-700/40 text-amber-500 border border-amber-500/50 uppercase tracking-widest text-[10px]">
                     Restore
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={handleDismissDraft}>
+                  <Button size="sm" variant="ghost" onClick={handleDismissDraft} className="text-stone-500 hover:text-stone-300">
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -583,14 +582,14 @@ export function AIAssistant({
 
         {/* Name Input */}
         {showNameInput ? (
-          <div className="px-4 py-8 text-center space-y-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <Bot className="w-8 h-8 text-green-700" />
+          <div className="px-4 py-8 text-center space-y-4 overflow-y-auto flex-1">
+            <div className="w-16 h-16 bg-amber-900/20 rounded-full flex items-center justify-center mx-auto border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+              <Bot className="w-8 h-8 text-amber-500" />
             </div>
             <div>
-              <h3 className="text-lg mb-2">Welcome to AI Study Assistant</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Please enter your name to get started
+              <h3 className="text-lg mb-2 text-stone-200 font-bold">AI Interface Online</h3>
+              <p className="text-xs text-stone-500 mb-4 font-mono">
+                Identify yourself to proceed
               </p>
             </div>
             <div className="space-y-2">
@@ -598,18 +597,18 @@ export function AIAssistant({
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSetName()}
-                placeholder="Your name"
-                className="max-w-xs mx-auto"
+                placeholder="Enter callsign"
+                className="max-w-xs mx-auto bg-stone-950 border-amber-900/30 text-stone-200 placeholder:text-stone-700 focus:border-amber-500 rounded-none text-center"
               />
-              <Button onClick={handleSetName} disabled={!nameInput.trim()}>
-                Start Chat
+              <Button onClick={handleSetName} disabled={!nameInput.trim()} className="rounded-none bg-amber-700 hover:bg-amber-600 text-stone-950 font-bold">
+                Initialize
               </Button>
             </div>
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-1 px-4">
-              <div className="space-y-4 pb-4">
+            <ScrollArea className="flex-1 h-full w-full">
+              <div className="px-4 py-4 space-y-4">
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -617,18 +616,18 @@ export function AIAssistant({
                       }`}
                   >
                     {message.role === "assistant" && (
-                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                        <Bot className="w-4 h-4 text-green-700" />
+                      <div className="w-8 h-8 rounded-none bg-amber-900/20 border border-amber-500/20 flex items-center justify-center shrink-0">
+                        <Bot className="w-4 h-4 text-amber-500" />
                       </div>
                     )}
                     <div className={`flex-1 ${message.role === "user" ? "flex justify-end" : ""}`}>
                       <div
-                        className={`max-w-[85%] rounded-2xl px-4 py-2 ${message.role === "user"
-                            ? "bg-green-700 text-white"
-                            : "bg-gray-100 text-gray-900"
+                        className={`max-w-[85%] rounded-none px-4 py-3 border ${message.role === "user"
+                          ? "bg-amber-900/20 border-amber-500/30 text-stone-200"
+                          : "bg-stone-800 border-stone-700 text-stone-300"
                           }`}
                       >
-                        <p className="text-sm whitespace-pre-line">{message.content}</p>
+                        <p className="text-xs leading-relaxed whitespace-pre-line font-mono">{message.content}</p>
                         {message.editedByTeacher && (
                           <Badge variant="secondary" className="mt-2 text-xs">
                             Reviewed by teacher
@@ -637,11 +636,11 @@ export function AIAssistant({
 
                         {/* Clickable Citation */}
                         {message.citation && message.citation.lessonPlanId && (
-                          <div className="mt-3 pt-2 border-t border-gray-200">
+                          <div className="mt-3 pt-2 border-t border-stone-700/50">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-auto p-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 w-full justify-start"
+                              className="h-auto p-2 text-[10px] text-amber-500 hover:text-amber-400 hover:bg-amber-900/20 w-full justify-start tracking-wider"
                               onClick={() => {
                                 if (message.citation?.lessonPlanId) {
                                   onNavigateToLesson?.(message.citation.lessonPlanId);
@@ -658,48 +657,22 @@ export function AIAssistant({
                         )}
 
                         {message.relatedPlans && message.relatedPlans.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-gray-200">
-                            <p className="text-xs text-gray-500 mb-1">Related lessons:</p>
+                          <div className="mt-2 pt-2 border-t border-stone-700/50">
+                            <p className="text-[10px] text-stone-500 mb-1 font-bold">Ref Modules:</p>
                             {message.relatedPlans.map((planTitle, idx) => (
-                              <Badge key={idx} variant="outline" className="text-xs mr-1 mb-1">
+                              <Badge key={idx} variant="outline" className="text-[9px] mr-1 mb-1 border-stone-600 text-stone-400 bg-stone-900/50 rounded-none">
                                 {planTitle}
                               </Badge>
                             ))}
                           </div>
                         )}
                       </div>
-
-                      {/* Rating buttons for assistant messages */}
-                      {message.role === "assistant" && !message.id.startsWith("welcome") && (
-                        <div className="flex gap-1 mt-1 ml-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-6 px-2 ${message.rating === "helpful"
-                                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                : "text-gray-400 hover:text-green-600"
-                              }`}
-                            onClick={() => handleRating(message.id, "helpful")}
-                          >
-                            <ThumbsUp className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-6 px-2 ${message.rating === "not-helpful"
-                                ? "bg-red-100 text-red-700 hover:bg-red-200"
-                                : "text-gray-400 hover:text-red-600"
-                              }`}
-                            onClick={() => handleRating(message.id, "not-helpful")}
-                          >
-                            <ThumbsDown className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      )}
                     </div>
+                    {/* Rating buttons for assistant messages */}
+                    {/* Rating buttons removed per user request */}
                     {message.role === "user" && (
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                        <User className="w-4 h-4 text-gray-600" />
+                      <div className="w-8 h-8 rounded-none bg-amber-900/40 border border-amber-500/40 flex items-center justify-center shrink-0">
+                        <User className="w-4 h-4 text-amber-500" />
                       </div>
                     )}
                   </div>
@@ -707,14 +680,14 @@ export function AIAssistant({
 
                 {isTyping && (
                   <div className="flex gap-2 justify-start">
-                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                      <Bot className="w-4 h-4 text-green-700" />
+                    <div className="w-8 h-8 rounded-none bg-amber-900/20 border border-amber-500/20 flex items-center justify-center shrink-0">
+                      <Bot className="w-4 h-4 text-amber-500" />
                     </div>
-                    <div className="bg-gray-100 rounded-2xl px-4 py-2">
+                    <div className="bg-stone-800 border border-stone-700 rounded-none px-4 py-3">
                       <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <div className="w-1.5 h-1.5 bg-amber-500/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <div className="w-1.5 h-1.5 bg-amber-500/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <div className="w-1.5 h-1.5 bg-amber-500/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                       </div>
                     </div>
                   </div>
@@ -729,15 +702,15 @@ export function AIAssistant({
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                  placeholder="Ask a question about your lessons..."
-                  className="flex-1"
+                  placeholder="Query database..."
+                  className="flex-1 bg-stone-950 border-amber-900/30 text-stone-200 placeholder:text-stone-700 focus:border-amber-500 rounded-none text-xs"
                 />
-                <Button onClick={handleSend} size="icon" disabled={!input.trim()}>
+                <Button onClick={handleSend} size="icon" disabled={!input.trim()} className="bg-amber-700 hover:bg-amber-600 text-stone-950 rounded-none">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                AI responses are based on available lesson plans and study notes
+              <p className="text-[10px] text-stone-600 mt-2 text-center">
+                Responses optimized via neural link from archive data
               </p>
             </div>
           </>

@@ -549,16 +549,16 @@ export function StudentView({
         </div>
       </TabsContent>
 
-      <TabsContent value="ai" className="m-0 pb-20">
-        <div className="space-y-4">
+      <TabsContent value="ai" className="m-0 h-full">
+        <div className="h-full">
           {studentName && (
             <Button
               variant="outline"
               onClick={() => setShowHistory(true)}
-              className="w-full rounded-none border-stone-700 text-stone-400 hover:bg-stone-800 hover:text-stone-200 uppercase tracking-widest text-xs"
+              className="w-full rounded-none border-t-0 border-x-0 border-b border-stone-800 text-stone-500 hover:bg-stone-800 hover:text-stone-300 uppercase tracking-widest text-[10px] h-8 bg-stone-900"
             >
-              <History className="w-4 h-4 mr-2" />
-              View Conversation Logs
+              <History className="w-3 h-3 mr-2" />
+              Conversation Logs
             </Button>
           )}
           <AIAssistant
@@ -668,28 +668,45 @@ export function StudentView({
       </TabsContent>
 
       {/* Bottom Navigation */}
-      <TabsList className="fixed bottom-0 left-0 right-0 max-w-md mx-auto flex rounded-none border-t bg-white h-16 shadow-lg">
-        <TabsTrigger value="lessons" className="gap-1 flex-col h-full flex-1">
+      <TabsList className="fixed bottom-0 left-0 right-0 w-full flex rounded-none border-t border-amber-900/30 bg-stone-900 h-16 shadow-lg z-50">
+        <TabsTrigger
+          value="lessons"
+          className="gap-1 flex-col h-full flex-1 data-[state=active]:text-amber-500 text-stone-500 hover:text-stone-300 transition-colors bg-transparent data-[state=active]:bg-transparent"
+        >
           <BookOpen className="w-4 h-4" />
-          <span className="text-xs">Lessons</span>
+          <span className="text-[10px] uppercase tracking-widest mt-1">Lessons</span>
         </TabsTrigger>
-        <TabsTrigger value="notes" className="gap-1 flex-col h-full flex-1">
+        <TabsTrigger
+          value="notes"
+          className="gap-1 flex-col h-full flex-1 data-[state=active]:text-amber-500 text-stone-500 hover:text-stone-300 transition-colors bg-transparent data-[state=active]:bg-transparent"
+        >
           <FileText className="w-4 h-4" />
-          <span className="text-xs">Notes</span>
+          <span className="text-[10px] uppercase tracking-widest mt-1">Notes</span>
         </TabsTrigger>
-        <TabsTrigger value="ai" className="gap-1.5 flex-col h-full flex-[1.5] bg-gradient-to-b from-green-50 to-transparent">
-          <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center -mt-6 shadow-lg border-4 border-white">
-            <Bot className="w-6 h-6 text-white" />
+        <TabsTrigger
+          value="ai"
+          className="gap-1.5 flex-col h-full flex-[1.5] bg-transparent data-[state=active]:bg-transparent relative group"
+        >
+          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
+            <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.3)] border-4 border-stone-900 transition-transform group-hover:scale-110">
+              <Bot className="w-6 h-6 text-stone-900 fill-stone-900" />
+            </div>
           </div>
-          <span className="text-xs -mt-1">AI</span>
+          <span className="text-[10px] uppercase tracking-widest mt-8 font-bold text-amber-500">AI</span>
         </TabsTrigger>
-        <TabsTrigger value="favorites" className="gap-1 flex-col h-full flex-1">
+        <TabsTrigger
+          value="favorites"
+          className="gap-1 flex-col h-full flex-1 data-[state=active]:text-amber-500 text-stone-500 hover:text-stone-300 transition-colors bg-transparent data-[state=active]:bg-transparent"
+        >
           <Heart className="w-4 h-4" />
-          <span className="text-xs">Favorites</span>
+          <span className="text-[10px] uppercase tracking-widest mt-1">Favs</span>
         </TabsTrigger>
-        <TabsTrigger value="games" className="gap-1 flex-col h-full flex-1">
+        <TabsTrigger
+          value="games"
+          className="gap-1 flex-col h-full flex-1 data-[state=active]:text-amber-500 text-stone-500 hover:text-stone-300 transition-colors bg-transparent data-[state=active]:bg-transparent"
+        >
           <Gamepad2 className="w-4 h-4" />
-          <span className="text-xs">Games</span>
+          <span className="text-[10px] uppercase tracking-widest mt-1">Games</span>
         </TabsTrigger>
       </TabsList>
 
