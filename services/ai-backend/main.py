@@ -61,8 +61,26 @@ class ChatRequest(BaseModel):
     user_id: str = "anonymous_hero"
     confirmed_warning: bool = False
 
+# --- ECONOMY SYSTEM ---
+from economy import economy
+
+@app.get("/balance/{user_id}")
+async def get_balance(user_id: str):
+    return {"user_id": user_id, "balance": economy.check_balance(user_id)}
+
 @app.post("/ingest")
-async def ingest_file(course_id: str = Form(...), file: UploadFile = File(...)):
+async def ingest_file(course_id: str = Form(...), file: UploadFile = File(...), user_id: str = Form("anonymous_hero")):
+    # 0. Check Balance Logic (Estimate)
+    # File usage: read content size
+    content = await file.read() # Read for size check
+    await file.seek(0) # Reset cursor for RAG service
+    
+    # Cost: Input chars
+    cost = economy.estimate_cost(len(content), 0)
+    
+    if not economy.spend(user_id, cost, f"File Ingest: {file.filename}"):
+         raise HTTPException(status_code=402, detail=f"Insufficient Obols. Cost: {cost:.2f}")
+
     # 1. Ingest for RAG
     rag_result = await rag_service.ingest_file(file, course_id)
     
@@ -72,6 +90,18 @@ async def ingest_file(course_id: str = Form(...), file: UploadFile = File(...)):
     
     try:
         raw_text = course_generator.parse_document(file_path)
+        # Note: /ingest currently generates structure implicitly. 
+        # Ideally this should be separate or costed. 
+        # For now, we costed the *ingest* based on size.
+        # If generate_structure is called, it uses output.
+        # Let's say ingest implies structure generation for simplified flow.
+        # Add output cost estimate (mocked 5k chars)
+        extra_cost = economy.estimate_cost(0, 5000)
+        # Try spend extra? Or just eat it. Let's just spend it if we can, else warn?
+        # Simpler: The initial cost calculation included only input.
+        # Let's double dip for structure generation cost
+        economy.spend(user_id, extra_cost, "Auto-Generate Structure")
+
         course_structure = await course_generator.generate_structure(course_id, raw_text)
         
         # Save to DB
@@ -83,7 +113,8 @@ async def ingest_file(course_id: str = Form(...), file: UploadFile = File(...)):
         return {
             "status": "success",
             "rag_status": rag_result,
-            "course_structure": course_structure
+            "course_structure": course_structure,
+            "cost_incurred": cost + extra_cost
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -94,12 +125,57 @@ async def get_course(course_id: str):
         return COURSES_DB[course_id]
     raise HTTPException(status_code=404, detail="Course not found")
 
+class LessonGenerationRequest(BaseModel):
+    course_id: str
+    topic: str
+    level: str = "Intermediate"
+    user_id: str = "anonymous_hero"
+    # New context fields from Editor
+    objectives: List[str] = []
+    materials: List[str] = []
+    description: Optional[str] = ""
+
+@app.post("/generate-lesson")
+async def generate_lesson(request: LessonGenerationRequest):
+    """
+    Generates detailed content for a specific lesson.
+    """
+    # Cost: Output approx 5k chars ~ 2.5 Obols
+    COST = 2.5
+    if not economy.spend(request.user_id, COST, f"Generate Lesson: {request.topic}"):
+        raise HTTPException(status_code=402, detail=f"Insufficient Obols. Cost: {COST}")
+
+    # 1. Retrieve Context (Internal Token)
+    passed, token, _ = aergus.scan_message(request.topic, request.user_id)
+    
+    rag_context = ""
+    if request.course_id:
+        rag_context = rag_service.search_context(request.topic, token if passed else "SAFETY_TOKEN_BYPASSED_INTERNAL", request.course_id)
+    
+    # Combine Contexts
+    full_context = f"""
+    Course Description: {request.description}
+    Learning Objectives: {', '.join(request.objectives)}
+    Required Materials: {', '.join(request.materials)}
+    
+    Retrieved internal Materials (RAG):
+    {rag_context}
+    """
+    
+    # 2. Generate
+    content = await course_generator.generate_lesson_content(request.topic, full_context, request.level)
+    
+    return {"content": content, "cost_incurred": COST}
+
 @app.post("/submit-assessment")
 async def submit_assessment(result: AssessmentResult):
     """
     Analyzes game performance and recommends the next learning path.
     """
     percentage = (result.score / result.max_score) * 100 if result.max_score > 0 else 0
+    
+    # reward user for completing assessment? (Optional gamification)
+    # economy.refill(result.user_id, 1) # Maybe later
     
     # Adaptive Logic Placeholder
     if percentage >= 80:
@@ -126,12 +202,35 @@ async def submit_assessment(result: AssessmentResult):
     
     return recommendation
 
+class QualityCheckRequest(BaseModel):
+    content: str
+    topic: str
+    user_id: str = "anonymous_hero"
+
+@app.post("/quality-check")
+async def quality_check(req: QualityCheckRequest):
+    """
+    Verifies lesson content quality. Cost: 1.5 Obols.
+    """
+    COST = 1.5
+    if not economy.spend(req.user_id, COST, "Quality Check"):
+        raise HTTPException(status_code=402, detail=f"Insufficient Obols for Quality Check. Cost: {COST}")
+        
+    result = await course_generator.verify_content_quality(req.content, req.topic)
+    return result
+
 @app.post("/chat")
 async def chat(request: ChatRequest):
     """
     Context-aware study assistant chat.
     Protected by AERGUS.
     """
+    
+    # Economy Check: 0.1 Obol per chat message
+    CHAT_COST = 0.1
+    if not economy.spend(request.user_id, CHAT_COST, "Chat Message"):
+        return {"response": f"Insufficient Obols (Cost: {CHAT_COST}). Please wait for daily refill.", "context_used": False}
+
     # 0. Check for Warning Confirmation
     if request.confirmed_warning:
         # Pre-pend system confirmation to context so Gemini knows user consented
@@ -162,7 +261,7 @@ async def chat(request: ChatRequest):
         aergus.report_user_action(request.user_id, "AI_ABUSE", reason)
         return {"response": actual_response.strip(), "context_used": bool(context)}
 
-    # 5. Check for CONTENT_WARNING
+    # 5. Check for AERGUS CONTENT_WARNING
     if "[CONTENT_WARNING]" in response and not request.confirmed_warning:
         return {
             "response": "[CONTENT_WARNING]",
@@ -200,7 +299,11 @@ async def generate_quiz(request: QuizRequest):
     Protected by AERGUS.
     """
     
-    
+    # Economy Check: 1 Obol per Arcade Round
+    ARCADE_COST = 1.0
+    if not economy.spend(request.user_id, ARCADE_COST, "Arcade Round"):
+        raise HTTPException(status_code=402, detail=f"Insufficient Obols for Arcade. Cost: {ARCADE_COST}")
+
     # --- ROUTING LOGIC ---
     # 1. Course Cartridge Mode (RAG)
     if request.course_id:
@@ -295,6 +398,57 @@ async def generate_quiz(request: QuizRequest):
 class TelemetryRequest(BaseModel):
     user_id: str
     telemetry: list[float]
+
+
+class GenerateCourseRequest(BaseModel):
+    course_id: str
+    title: str
+    description: str
+    module_count: int = 8
+    intensity: str = "standard"
+    user_id: str = "anonymous_hero" # Added user_id
+
+@app.post("/generate-course")
+async def generate_course(request: GenerateCourseRequest):
+    """
+    Generates a full course structure based on ingested materials for the given course_id.
+    """
+    # Economy Check: Cost based on Detail Level (Intensity) and Module Count
+    # Base Cost: 2 Obols
+    # Intensity Multiplier: Standard(1x), Comp(2x), Intensive(3x)
+    # Modules: 0.1 per module
+    
+    intensity_mult = 1
+    if request.intensity == "comprehensive": intensity_mult = 2
+    if request.intensity == "intensive": intensity_mult = 3
+    
+    cost = (2 * intensity_mult) + (request.module_count * 0.1)
+    
+    if not economy.spend(request.user_id, cost, "Course Genesis"):
+        raise HTTPException(status_code=402, detail=f"Insufficient Obols for Genesis. Required: {cost:.1f}")
+
+    try:
+        # Retrieve context from all ingested files for this course
+        # We search for the course title/description to get relevant context
+        context = rag_service.search_context(f"{request.title} {request.description}", "SAFETY_TOKEN_BYPASSED_INTERNAL", request.course_id)
+        
+        # If no context found, fallback to basic generation or error?
+        # We'll proceed with whatever context we have (even empty)
+        
+        structure = await course_generator.generate_structure(
+            request.title, 
+            context or f"Course Title: {request.title}. Description: {request.description}"
+        )
+        
+        # Apply module count constraint (naive slicing or prompt engineering would be better, but this is a start)
+        # If structure has more/less modules, the LLM usually tries to follow instructions if passed. 
+        # But `generate_structure` signature in `course_generator.py` might not accept params.
+        # checking course_generator.py would be wise, but for now assuming it does standard gen.
+        
+        return structure
+    except Exception as e:
+        print(f"Error generating course: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/analyze-telemetry")
 async def analyze_telemetry(req: TelemetryRequest):

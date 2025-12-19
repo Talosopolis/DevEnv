@@ -44,15 +44,13 @@ export function AIAssistant({
   const [showNameInput, setShowNameInput] = useState(!initialStudentName && !loadedConversation);
   const [nameInput, setNameInput] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(loadedConversation?.id || null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showDraftAlert, setShowDraftAlert] = useState(false);
   const [draftConversation, setDraftConversation] = useState<{ messages: Message[]; timestamp: string } | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
   // Load draft conversation on mount
@@ -607,7 +605,7 @@ export function AIAssistant({
           </div>
         ) : (
           <>
-            <ScrollArea className="flex-1 h-full w-full">
+            <div className="flex-1 w-full bg-stone-900/50 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-stone-900 [&::-webkit-scrollbar-thumb]:bg-amber-900/50 hover:[&::-webkit-scrollbar-thumb]:bg-amber-700/50">
               <div className="px-4 py-4 space-y-4">
                 {messages.map((message) => (
                   <div
@@ -644,14 +642,11 @@ export function AIAssistant({
                               onClick={() => {
                                 if (message.citation?.lessonPlanId) {
                                   onNavigateToLesson?.(message.citation.lessonPlanId);
-                                  toast.success(`Opening ${message.citation.lessonPlanTitle}`);
                                 }
                               }}
                             >
-                              <BookOpen className="w-3 h-3 mr-1 shrink-0" />
-                              <span className="text-left">
-                                View this lesson: {message.citation.lessonPlanTitle}
-                              </span>
+                              <BookOpen className="w-3 h-3 mr-1" />
+                              View Source: {message.citation.title}
                             </Button>
                           </div>
                         )}
@@ -692,11 +687,12 @@ export function AIAssistant({
                     </div>
                   </div>
                 )}
-                <div ref={scrollRef} />
+                {/* Invisible element to scroll to */}
+                <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
+            </div>
 
-            <div className="px-4 pb-4">
+            <div className="p-4 bg-stone-900/95 border-t border-amber-900/30 shrink-0 z-10">
               <div className="flex gap-2">
                 <Input
                   value={input}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LessonPlan } from "../App";
+import { LessonPlan } from "../types";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -7,8 +7,8 @@ import { Textarea } from "./ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 import { Switch } from "./ui/switch";
-import { Plus, X, ArrowLeft } from "lucide-react";
-import { toast } from "sonner@2.0.3";
+import { Plus, X, ArrowLeft, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 
 type LessonPlanFormProps = {
   initialData?: LessonPlan;
@@ -27,11 +27,10 @@ export function LessonPlanForm({ initialData, onSubmit, onCancel }: LessonPlanFo
   const [materials, setMaterials] = useState<string[]>(initialData?.materials || [""]);
   const [activities, setActivities] = useState<string[]>(initialData?.activities || [""]);
   const [isPublic, setIsPublic] = useState(initialData?.isPublic ?? true);
-  const [password, setPassword] = useState(initialData?.password || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     onSubmit({
       title,
       subject,
@@ -43,7 +42,7 @@ export function LessonPlanForm({ initialData, onSubmit, onCancel }: LessonPlanFo
       materials: materials.filter(m => m.trim() !== ""),
       activities: activities.filter(a => a.trim() !== ""),
       isPublic,
-      password: isPublic ? "" : password,
+      password: "", // Removed password logic
     });
   };
 
@@ -63,95 +62,107 @@ export function LessonPlanForm({ initialData, onSubmit, onCancel }: LessonPlanFo
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>{initialData ? "Edit" : "Create"} Lesson Plan</CardTitle>
+      <Card className="bg-stone-900 border-amber-900/20 rounded-none">
+        <CardHeader className="border-b border-stone-800">
+          <CardTitle className="text-amber-500 uppercase tracking-widest text-lg font-bold">
+            {initialData ? "Modify Archive Record" : "Initialize New Archive"}
+          </CardTitle>
+          <CardDescription className="text-stone-500 text-xs">
+            {initialData ? "Update module parameters" : "Define core parameters for the new educational module"}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <ScrollArea className="h-[calc(100vh-280px)] pr-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Info */}
               <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
+                <Label htmlFor="title" className="uppercase tracking-widest text-[10px] text-stone-400">Module Title *</Label>
                 <Input
                   id="title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Introduction to Photosynthesis"
+                  placeholder="E.G. INTRODUCTION TO PHOTOSYNTHESIS"
                   required
+                  className="bg-stone-950 border-amber-900/30 text-stone-200 placeholder:text-stone-700 focus:border-amber-500 rounded-none tracking-wide text-sm"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="subject">Subject *</Label>
+                  <Label htmlFor="subject" className="uppercase tracking-widest text-[10px] text-stone-400">Discipline *</Label>
                   <Input
                     id="subject"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g., Biology"
+                    placeholder="E.G. BIOLOGY"
                     required
+                    className="bg-stone-950 border-amber-900/30 text-stone-200 placeholder:text-stone-700 focus:border-amber-500 rounded-none tracking-wide text-xs"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="grade">Grade *</Label>
+                  <Label htmlFor="grade" className="uppercase tracking-widest text-[10px] text-stone-400">Target Level *</Label>
                   <Input
                     id="grade"
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
-                    placeholder="e.g., 8th Grade"
+                    placeholder="E.G. 8TH GRADE"
                     required
+                    className="bg-stone-950 border-amber-900/30 text-stone-200 placeholder:text-stone-700 focus:border-amber-500 rounded-none tracking-wide text-xs"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="duration">Duration *</Label>
+                  <Label htmlFor="duration" className="uppercase tracking-widest text-[10px] text-stone-400">Est. Duration *</Label>
                   <Input
                     id="duration"
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
-                    placeholder="e.g., 60 minutes"
+                    placeholder="E.G. 60 MINUTES"
                     required
+                    className="bg-stone-950 border-amber-900/30 text-stone-200 placeholder:text-stone-700 focus:border-amber-500 rounded-none tracking-wide text-xs"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="teacher">Teacher Name *</Label>
+                  <Label htmlFor="teacher" className="uppercase tracking-widest text-[10px] text-stone-400">Instructor *</Label>
                   <Input
                     id="teacher"
                     value={teacherName}
                     onChange={(e) => setTeacherName(e.target.value)}
-                    placeholder="e.g., Ms. Johnson"
+                    placeholder="E.G. MS. JOHNSON"
                     required
+                    className="bg-stone-950 border-amber-900/30 text-stone-200 placeholder:text-stone-700 focus:border-amber-500 rounded-none tracking-wide text-xs"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
+                <Label htmlFor="description" className="uppercase tracking-widest text-[10px] text-stone-400">Abstract *</Label>
                 <Textarea
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Brief overview of the lesson..."
+                  placeholder="Brief overview of the module content..."
                   rows={3}
                   required
+                  className="bg-stone-950 border-amber-900/30 text-stone-300 placeholder:text-stone-700 focus:border-amber-500 rounded-none font-mono text-sm leading-relaxed"
                 />
               </div>
 
               {/* Learning Objectives */}
-              <div className="space-y-2">
+              <div className="space-y-3 pt-2 border-t border-stone-800">
                 <div className="flex items-center justify-between">
-                  <Label>Learning Objectives</Label>
+                  <Label className="uppercase tracking-widest text-xs text-amber-600 font-bold">Objectives</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => addItem(objectives, setObjectives)}
+                    className="text-stone-500 hover:text-amber-500 hover:bg-stone-800 h-6 text-[10px] uppercase tracking-widest"
                   >
                     <Plus className="w-3 h-3 mr-1" />
-                    Add
+                    Add Objective
                   </Button>
                 </div>
                 {objectives.map((obj, index) => (
@@ -159,14 +170,16 @@ export function LessonPlanForm({ initialData, onSubmit, onCancel }: LessonPlanFo
                     <Input
                       value={obj}
                       onChange={(e) => updateItem(objectives, setObjectives, index, e.target.value)}
-                      placeholder={`Objective ${index + 1}`}
+                      placeholder={`OBJECTIVE ${index + 1}`}
+                      className="bg-stone-950 border-stone-800 text-stone-300 focus:border-amber-500 rounded-none text-xs"
                     />
                     {objectives.length > 1 && (
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => removeItem(objectives, setObjectives, index)}
+                        className="h-9 w-9 text-stone-600 hover:text-red-500 hover:bg-stone-800 rounded-none"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -176,17 +189,18 @@ export function LessonPlanForm({ initialData, onSubmit, onCancel }: LessonPlanFo
               </div>
 
               {/* Materials */}
-              <div className="space-y-2">
+              <div className="space-y-3 pt-2 border-t border-stone-800">
                 <div className="flex items-center justify-between">
-                  <Label>Materials Needed</Label>
+                  <Label className="uppercase tracking-widest text-xs text-amber-600 font-bold">Required Materials</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => addItem(materials, setMaterials)}
+                    className="text-stone-500 hover:text-amber-500 hover:bg-stone-800 h-6 text-[10px] uppercase tracking-widest"
                   >
                     <Plus className="w-3 h-3 mr-1" />
-                    Add
+                    Add Material
                   </Button>
                 </div>
                 {materials.map((material, index) => (
@@ -194,14 +208,16 @@ export function LessonPlanForm({ initialData, onSubmit, onCancel }: LessonPlanFo
                     <Input
                       value={material}
                       onChange={(e) => updateItem(materials, setMaterials, index, e.target.value)}
-                      placeholder={`Material ${index + 1}`}
+                      placeholder={`MATERIAL ${index + 1}`}
+                      className="bg-stone-950 border-stone-800 text-stone-300 focus:border-amber-500 rounded-none text-xs"
                     />
                     {materials.length > 1 && (
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => removeItem(materials, setMaterials, index)}
+                        className="h-9 w-9 text-stone-600 hover:text-red-500 hover:bg-stone-800 rounded-none"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -211,17 +227,18 @@ export function LessonPlanForm({ initialData, onSubmit, onCancel }: LessonPlanFo
               </div>
 
               {/* Activities */}
-              <div className="space-y-2">
+              <div className="space-y-3 pt-2 border-t border-stone-800">
                 <div className="flex items-center justify-between">
-                  <Label>Activities</Label>
+                  <Label className="uppercase tracking-widest text-xs text-amber-600 font-bold">Planned Activities</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => addItem(activities, setActivities)}
+                    className="text-stone-500 hover:text-amber-500 hover:bg-stone-800 h-6 text-[10px] uppercase tracking-widest"
                   >
                     <Plus className="w-3 h-3 mr-1" />
-                    Add
+                    Add Activity
                   </Button>
                 </div>
                 {activities.map((activity, index) => (
@@ -229,14 +246,16 @@ export function LessonPlanForm({ initialData, onSubmit, onCancel }: LessonPlanFo
                     <Input
                       value={activity}
                       onChange={(e) => updateItem(activities, setActivities, index, e.target.value)}
-                      placeholder={`Activity ${index + 1}`}
+                      placeholder={`ACTIVITY ${index + 1}`}
+                      className="bg-stone-950 border-stone-800 text-stone-300 focus:border-amber-500 rounded-none text-xs"
                     />
                     {activities.length > 1 && (
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => removeItem(activities, setActivities, index)}
+                        className="h-9 w-9 text-stone-600 hover:text-red-500 hover:bg-stone-800 rounded-none"
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -246,37 +265,32 @@ export function LessonPlanForm({ initialData, onSubmit, onCancel }: LessonPlanFo
               </div>
 
               {/* Privacy Settings */}
-              <div className="space-y-2">
+              <div className="space-y-4 pt-4 border-t border-stone-800 bg-stone-950/50 p-4 border">
                 <div className="flex items-center justify-between">
-                  <Label>Privacy Settings</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={isPublic}
-                    onCheckedChange={(checked) => setIsPublic(checked)}
-                  />
-                  <Label>Public</Label>
-                </div>
-                {!isPublic && (
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter a password to protect this lesson plan"
+                  <div>
+                    <Label className="uppercase tracking-widest text-xs text-stone-300">Access Protocol</Label>
+                    <p className="text-[10px] text-stone-600 font-mono">DETERMINES VISIBILITY FOR INITIATES</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className={`uppercase tracking-widest text-[10px] ${isPublic ? 'text-amber-500' : 'text-stone-500'}`}>
+                      {isPublic ? "Public Access" : "Restricted"}
+                    </Label>
+                    <Switch
+                      checked={isPublic}
+                      onCheckedChange={(checked: boolean) => setIsPublic(checked)}
+                      className="bg-stone-800 data-[state=checked]:bg-amber-600"
                     />
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 pt-2">
-                <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
+              <div className="flex gap-3 pt-4">
+                <Button type="button" variant="outline" className="flex-1 rounded-none border-stone-700 text-stone-400 hover:bg-stone-800 hover:text-stone-200 uppercase tracking-widest text-xs" onClick={onCancel}>
                   Cancel
                 </Button>
-                <Button type="submit" className="flex-1">
-                  {initialData ? "Update" : "Create"}
+                <Button type="submit" className="flex-1 rounded-none bg-amber-700 hover:bg-amber-600 text-stone-950 font-bold uppercase tracking-widest text-xs">
+                  {initialData ? "Update Archive" : "Initialize Archive"}
                 </Button>
               </div>
             </form>

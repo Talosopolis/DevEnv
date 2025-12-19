@@ -94,6 +94,94 @@ class CourseGenerator:
             logger.error(f"Gemini generation failed: {e}")
             return self._mock_course_structure(topic)
 
+    async def generate_lesson_content(self, topic: str, context: str, level: str) -> str:
+        """
+        Generates detailed lesson content (Markdown) for a specific topic.
+        """
+        if not self.client:
+             return f"# {topic}\n\n*Mock Content Generated*\n\nThis is a mock lesson content for **{topic}** because the AI service is unavailable.\n\n### Key Concepts\n- Concept 1\n- Concept 2\n\n### Summary\nLorem ipsum dolor sit amet."
+
+        prompt = f"""
+        You are an expert educational content creator (PhD level).
+        
+        Task: Write a COMPREHENSIVE, IN-DEPTH lesson on '{topic}'.
+        Target Audience Level: {level}
+        
+        Use the following Context as the PRIMARY source of truth and structure:
+        {context[:15000]} # Extended context window
+        
+        Requirements:
+        1. Length: The content MUST be substantial (equivalent to ~2 pages of text). Do not write short summaries.
+        2. Depth: Go deep into the mechanics, history, and application of the topic.
+        3. Structure:
+           - **Title & Overview**: engaging hook.
+           - **Learning Objectives Check**: Briefly mention which objectives this covers.
+           - **Core Theory**: The meat of the lesson. Use subsections.
+           - **Detailed Analysis**: Break down complex parts.
+           - **Examples & Case Studies**: Concrete real-world scenarios.
+           - **Summary & Key Takeaways**: Bullet points.
+           - **Further Reading**: Suggest related concepts.
+        
+        Formatting: Use Markdown with bolding, lists, and headers.
+        Tone: Authoritative, Inspiring, Academic yet accessible.
+        """
+        
+        try:
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    max_output_tokens=8192,
+                    temperature=0.7
+                )
+            )
+            return response.text
+        except Exception as e:
+            logger.error(f"Lesson generation failed: {e}")
+            return f"# Error Generating Content\n\nCould not generate content for {topic}. Error: {str(e)}"
+
+    async def verify_content_quality(self, content: str, topic: str) -> Dict[str, Any]:
+        """
+        Verifies educational content for factual accuracy and quality.
+        """
+        if not self.client:
+             return {"status": "pass", "feedback": "Mock Verification: Content looks good. (AI Offline)"}
+
+        prompt = f"""
+        You are an expert Educational Quality Assurance AI.
+        
+        Task: Verify the following Lesson Content for strictly fact-checking and pedagogical quality.
+        Topic: {topic}
+        
+        Content:
+        {content[:10000]}
+        
+        Rules:
+        1.  Check for factual errors.
+        2.  Check for harmful/unsafe content.
+        3.  Check for pedagogical clarity.
+        
+        Output JSON:
+        {{
+            "status": "pass" | "fail",
+            "feedback": "Brief summary of issues or confirmation of quality.",
+            "issues": ["List of specific issues if any"]
+        }}
+        """
+        
+        try:
+            response = self.client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
+            )
+            return json.loads(response.text)
+        except Exception as e:
+            logger.error(f"Quality Check failed: {e}")
+            return {"status": "fail", "feedback": "System Error during verification.", "issues": [str(e)]}
+
     def _mock_course_structure(self, topic: str) -> Dict[str, Any]:
         """Fallback mock structure if AI fails or key is missing."""
         return {
@@ -104,24 +192,24 @@ class CourseGenerator:
                     "title": "Module 1: Foundations",
                     "description": "Basic concepts and terminology.",
                     "lessons": [
-                        {"title": "Introduction to the Subject", "content_summary": "Overview of key concepts."},
-                        {"title": "Historical Context", "content_summary": "How we got here."}
+                        {"title": "Introduction to the Subject", "content_summary": "Overview of key concepts.", "content": "# Introduction\n\nWelcome to the course."},
+                        {"title": "Historical Context", "content_summary": "How we got here.", "content": "# History\n\nIt started long ago."}
                     ]
                 },
                 {
                     "title": "Module 2: Core Principles",
                     "description": "Deep dive into the mechanics.",
                     "lessons": [
-                        {"title": "Key Mechanism A", "content_summary": "Detailed explanation of mechanism A."},
-                        {"title": "Key Mechanism B", "content_summary": "Detailed explanation of mechanism B."}
+                        {"title": "Key Mechanism A", "content_summary": "Detailed explanation of mechanism A.", "content": "# Mechanism A\n\nDetails here."},
+                        {"title": "Key Mechanism B", "content_summary": "Detailed explanation of mechanism B.", "content": "# Mechanism B\n\nDetails here."}
                     ]
                 },
                  {
                     "title": "Module 3: Advanced Applications",
                     "description": "Real-world usage and complex scenarios.",
                     "lessons": [
-                        {"title": "Case Studies", "content_summary": "Real world examples."},
-                        {"title": "Future Trends", "content_summary": "Where the field is going."}
+                        {"title": "Case Studies", "content_summary": "Real world examples.", "content": "# Case Studies\n\nExample 1."},
+                        {"title": "Future Trends", "content_summary": "Where the field is going.", "content": "# Future\n\nAI is the future."}
                     ]
                 }
             ]

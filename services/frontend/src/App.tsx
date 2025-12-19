@@ -44,6 +44,7 @@ export default function App() {
 function AppContent() {
   const { user, signOut, bypassAuth } = useAuth();
   const [currentView, setCurrentView] = useState<string>('landing');
+  const [dashboardResetKey, setDashboardResetKey] = useState(0);
 
   // --- STATE INITIALIZATION (Raw Backup Logic) ---
   // We initialize directly with Mocks, no async loading that might fail.
@@ -57,6 +58,24 @@ function AppContent() {
   // Teacher Upload State
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
+  // Economy State
+  const [balance, setBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/balance/anonymous_hero');
+        const data = await res.json();
+        setBalance(data.balance);
+      } catch (e) {
+        console.error("Failed to fetch balance", e);
+      }
+    };
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 10000); // Poll every 10s
+    return () => clearInterval(interval);
+  }, []);
   const [generatedCourse, setGeneratedCourse] = useState<any | null>(null);
 
   // --- NAVIGATION ---
@@ -74,6 +93,14 @@ function AppContent() {
 
   const navigateTo = (view: string) => {
     window.location.hash = view;
+  };
+
+  const handleLogoClick = () => {
+    if (currentView === 'dashboard') {
+      setDashboardResetKey(prev => prev + 1);
+    } else {
+      navigateTo('dashboard');
+    }
   };
 
 
@@ -229,15 +256,33 @@ function AppContent() {
         {/* Content Layer */}
         <div className="relative z-10 w-full min-h-screen flex flex-col">
           <header className="bg-stone-900/90 backdrop-blur-md border-b border-amber-900/30 p-4 sticky top-0 z-20 flex justify-between items-center w-full shadow-lg">
-            <div>
+            <div
+              onClick={handleLogoClick}
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+            >
               <h1 className="flex items-center gap-2 text-amber-500 font-bold tracking-widest uppercase text-sm">
                 <Hexagon className="w-5 h-5 text-amber-500 fill-amber-500/10" />
                 Talosopolis
               </h1>
-              <p className="text-[10px] text-stone-500 tracking-[0.2em] ml-7">AIDED EDUCATION</p>
+              <p className="text-[10px] text-amber-500/60 uppercase tracking-widest font-mono pl-0.5">Aided Education</p>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Obol Budget Display */}
+            {currentView === 'dashboard' && (
+              <div className="pointer-events-auto bg-stone-950/80 border border-amber-900/30 backdrop-blur-md px-4 py-2 flex items-center gap-3 shadow-lg rounded-none mr-20">
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] text-stone-500 uppercase tracking-widest font-bold">Daily Budget</span>
+                  <span className={`text-sm font-mono font-bold ${balance !== null && balance < 10 ? 'text-red-500 animate-pulse' : 'text-amber-500'}`}>
+                    {balance !== null ? Math.floor(balance) : '--'} / 100 OBOLS
+                  </span>
+                </div>
+                <div className="w-8 h-8 rounded-full border border-amber-900/50 flex items-center justify-center bg-amber-500/10">
+                  <span className="text-amber-600 font-serif font-bold">O</span>
+                </div>
+              </div>
+            )}
+
+            <div className="pointer-events-auto flex items-center gap-4">
               {user && (
                 <div className="text-right hidden sm:block">
                   <p className="text-[10px] font-bold text-stone-300 uppercase tracking-wider">
@@ -296,6 +341,7 @@ function AppContent() {
               </TabsContent>
               <TabsContent value="student" className="m-0 p-0 sm:p-4 min-h-[80vh]">
                 <StudentView
+                  key={dashboardResetKey}
                   lessonPlans={lessonPlans}
                   notes={notes}
                   conversations={conversations}

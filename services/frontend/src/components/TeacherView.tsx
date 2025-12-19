@@ -1,11 +1,13 @@
 import { useState, useRef } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { LessonPlan, Note, Conversation } from "../types";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Plus, Clock, User, Pencil, Trash2, BookOpen, Upload, MessageSquare, Lock, Globe, FileText, Paperclip, StickyNote } from "lucide-react";
-import { LessonPlanForm } from "./LessonPlanForm";
+import { CourseWizard } from "./CourseWizard";
+import { MagisterCourseEditor } from "./MagisterCourseEditor";
 import { FileUpload } from "./FileUpload";
 import { ConversationReview } from "./ConversationReview";
 import { NotesManager } from "./NotesManager";
@@ -56,12 +58,13 @@ export function TeacherView({
   onDeleteConversation,
   generatedCourse
 }: TeacherViewProps) {
+  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showConversations, setShowConversations] = useState(false);
   const [editingPlan, setEditingPlan] = useState<LessonPlan | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<LessonPlan | null>(null);
-  const [recentlyDeleted, setRecentlyDeleted] = useState<{ plan: LessonPlan, timeout: NodeJS.Timeout } | null>(null);
+  const [recentlyDeleted, setRecentlyDeleted] = useState<{ plan: LessonPlan, timeout: ReturnType<typeof setTimeout> } | null>(null);
   const [extractedPlan, setExtractedPlan] = useState<Omit<LessonPlan, "id" | "createdAt"> | null>(null);
   const [addingNoteToLesson, setAddingNoteToLesson] = useState<LessonPlan | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
@@ -271,9 +274,9 @@ export function TeacherView({
 
   if (showForm) {
     return (
-      <LessonPlanForm
-        initialData={extractedPlan as any}
-        onSubmit={handleAdd}
+      <CourseWizard
+        existingData={extractedPlan as any}
+        onFinish={handleAdd}
         onCancel={() => {
           setShowForm(false);
           setExtractedPlan(null);
@@ -282,12 +285,25 @@ export function TeacherView({
     );
   }
 
+  // Assuming MagisterCourseEditor is imported at the top of the file
+  // Inside TeacherView function:
+
   if (editingPlan) {
+    // Ensure modules exist for legacy plans
+    const courseData = {
+      ...editingPlan,
+      modules: editingPlan.modules || []
+    };
+
     return (
-      <LessonPlanForm
-        initialData={editingPlan}
-        onSubmit={handleEdit}
-        onCancel={() => setEditingPlan(null)}
+      <MagisterCourseEditor
+        courseData={courseData}
+        onSave={(data, status) => {
+          onUpdate(editingPlan.id, { ...data, status });
+          setEditingPlan(null);
+          toast.success("Course Updated");
+        }}
+        onBack={() => setEditingPlan(null)}
       />
     );
   }
@@ -296,11 +312,23 @@ export function TeacherView({
     conv.messages.some(msg => msg.role === "assistant" && !msg.editedByTeacher)
   ).length;
 
-  // Filter out recently deleted lessons
+  // Filter out recently deleted lessons and separate by status AND filter by Owner ID
   const displayedLessonPlans = lessonPlans.filter(plan => {
     const notDeleted = !recentlyDeleted || recentlyDeleted.plan.id !== plan.id;
-    return notDeleted;
+    const isOwner = plan.ownerId === user?.id || (!plan.ownerId && user?.id === 'anonymous_hero');
+    return notDeleted && (plan.status === 'published' || !plan.status) && isOwner;
   });
+
+  const draftLessonPlans = lessonPlans.filter(plan => {
+    const notDeleted = !recentlyDeleted || recentlyDeleted.plan.id !== plan.id;
+    const isOwner = plan.ownerId === user?.id || (!plan.ownerId && user?.id === 'anonymous_hero');
+    return notDeleted && plan.status === 'draft' && isOwner;
+  });
+
+  const handleResumeDraft = (draft: LessonPlan) => {
+    setExtractedPlan(draft); // Use existing mechanism to pre-fill wizard
+    setShowForm(true);
+  };
 
   return (
     <Tabs defaultValue="lessons" className="w-full font-serif">
@@ -317,7 +345,7 @@ export function TeacherView({
             </Button>
           </div>
 
-          {/* Generated Course Preview */}
+          {/* Generated Course Preview (Active Generation) */}
           {generatedCourse && (
             <div className="bg-stone-900 border border-amber-500/30 rounded-none p-6 shadow-lg relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all duration-1000" />
@@ -352,7 +380,35 @@ export function TeacherView({
             </div>
           )}
 
+          {/* Drafts Section */}
+          {draftLessonPlans.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-xs uppercase tracking-widest text-stone-500 font-bold flex items-center gap-2">
+                <Pencil className="w-3 h-3" />
+                Work in Progress ({draftLessonPlans.length})
+              </h3>
+              <div className="grid grid-cols-1 gap-4">
+                {draftLessonPlans.map(draft => (
+                  <Card key={draft.id} className="bg-stone-900/50 border-stone-800 border-dashed rounded-none group hover:border-amber-500/30 transition-all cursor-pointer" onClick={() => handleResumeDraft(draft)}>
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-stone-300 font-bold text-sm uppercase tracking-wide group-hover:text-amber-500 transition-colors">{draft.title || "Untitled Archive"}</h4>
+                        <p className="text-[10px] text-stone-600 font-mono mt-1">LAST EDITED: {new Date(draft.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <Badge variant="outline" className="rounded-none border-amber-900/30 text-amber-600 text-[10px] uppercase tracking-widest">DRAFT</Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+
           <div className="space-y-4 pb-4">
+            <h3 className="text-xs uppercase tracking-widest text-stone-500 font-bold flex items-center gap-2 mt-6">
+              <BookOpen className="w-3 h-3" />
+              Published Archives ({displayedLessonPlans.length})
+            </h3>
             {displayedLessonPlans.length === 0 ? (
               <div className="text-center py-20 text-stone-600 border border-dashed border-stone-800 bg-stone-900/20">
                 <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-20" />

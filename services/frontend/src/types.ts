@@ -1,3 +1,16 @@
+export type Lesson = {
+    title: string;
+    duration: string;
+    description?: string;
+    content?: string; // Markdown/HTML content
+};
+
+export type Module = {
+    title: string;
+    description: string;
+    lessons: Lesson[];
+};
+
 export type LessonPlan = {
     id: string;
     title: string;
@@ -13,6 +26,10 @@ export type LessonPlan = {
     isPublic: boolean;
     password?: string;
     ownerId?: string;
+    // New fields for Course Wizard
+    modules?: Module[];
+    status?: 'draft' | 'published';
+    totalFileSize?: number;
 };
 
 export type Note = {
