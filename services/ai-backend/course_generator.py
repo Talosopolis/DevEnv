@@ -39,7 +39,7 @@ class CourseGenerator:
             raise
         return text
 
-    async def generate_structure(self, topic: str, content_text: str) -> Dict[str, Any]:
+    async def generate_structure(self, topic: str, content_text: str, module_count: int = 4, intensity: str = "standard") -> Dict[str, Any]:
         """
         Uses Gemini to generate a structured course curriculum from the provided text.
         Returns a JSON object representing the course tree.
@@ -47,20 +47,34 @@ class CourseGenerator:
         if not self.client:
             return self._mock_course_structure(topic)
 
+        # Intensity logic
+        depth_instruction = "Create a standard academic structure."
+        lesson_range = "2-4"
+        if intensity == "comprehensive":
+             depth_instruction = "Create a detailed breakdown with extensive coverage."
+             lesson_range = "3-5"
+        elif intensity == "intensive":
+             depth_instruction = "Create a highly rigorous, granular structure for advanced mastery."
+             lesson_range = "4-6"
+
         prompt = f"""
         You are an expert curriculum designer for an advanced AI learning platform.
         
         Task: Create a detailed course structure for the topic '{topic}' based on the provided content text.
         
+        Configuration:
+        - Target Module Count: EXACTLY {module_count} Modules.
+        - Intensity Level: {intensity.upper()} ({depth_instruction}).
+        
         Requirements:
         1. The output MUST be valid JSON.
         2. The structure must be: Course -> Modules -> Lessons.
-        3. Create 3-5 Modules.
-        4. Each Module should have 2-4 Lessons.
+        3. Create EXACTLY {module_count} Modules.
+        4. Each Module should have {lesson_range} Lessons.
         5. Include a brief description for the Course and each Module.
         
         Content Text:
-        {content_text[:10000]}  # Truncate to avoid token limits if necessary
+        {content_text[:15000]}
         
         Output Format (JSON):
         {{
@@ -154,7 +168,7 @@ class CourseGenerator:
         Topic: {topic}
         
         Content:
-        {content[:10000]}
+        {content[:50000]}
         
         Rules:
         1.  Check for factual errors.

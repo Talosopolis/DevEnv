@@ -28,6 +28,9 @@ import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import SpaceInvaders from "./SpaceInvaders";
+import GameLauncher from "./GameLauncher";
+import ExcavationGame from "./ExcavationGame";
+import RedLightGreenLightGame from "./RedLightGreenLightGame";
 
 
 type LessonViewerProps = {
@@ -48,7 +51,10 @@ export function LessonViewer({ lessonPlan, notes, onExit, onNoteClick }: LessonV
 function ModularCourseViewer({ lessonPlan, notes, onExit }: { lessonPlan: LessonPlan, notes: Note[], onExit: () => void }) {
   const [activeModuleIndex, setActiveModuleIndex] = useState<number | null>(null);
   const [activeLessonIndex, setActiveLessonIndex] = useState<number | null>(null);
-  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
+  const [completedLessons, setCompletedLessons] = useState<Record<string, number>>({});
+
+  // Game Selector
+  const [selectedGame, setSelectedGame] = useState<'shmup' | 'excavation' | 'protocol' | null>(null);
 
   // Assessment State
   const [showQuiz, setShowQuiz] = useState(false);
@@ -58,7 +64,15 @@ function ModularCourseViewer({ lessonPlan, notes, onExit }: { lessonPlan: Lesson
     const saved = localStorage.getItem(`progress_${lessonPlan.id}`);
     if (saved) {
       try {
-        setCompletedLessons(new Set(JSON.parse(saved)));
+        const parsed = JSON.parse(saved);
+        // Migration: Handle old Set format (array of strings) vs new Record
+        if (Array.isArray(parsed)) {
+          const migrated: Record<string, number> = {};
+          parsed.forEach((k: string) => migrated[k] = 100); // Assume 100% for migration
+          setCompletedLessons(migrated);
+        } else {
+          setCompletedLessons(parsed);
+        }
       } catch (e) {
         console.error("Failed to load progress", e);
       }
@@ -68,16 +82,39 @@ function ModularCourseViewer({ lessonPlan, notes, onExit }: { lessonPlan: Lesson
   const initiateLessonCompletion = (moduleIdx: number, lessonIdx: number) => {
     setQuizTarget({ m: moduleIdx, l: lessonIdx });
     setShowQuiz(true);
+    setSelectedGame(null); // Reset to launcher
   }
 
   const handleQuizPass = (score: number) => {
     if (quizTarget) {
       const lessonKey = `${quizTarget.m}-${quizTarget.l}`;
-      const newSet = new Set(completedLessons);
-      newSet.add(lessonKey);
-      setCompletedLessons(newSet);
-      localStorage.setItem(`progress_${lessonPlan.id}`, JSON.stringify(Array.from(newSet)));
-      toast.success(`ASSESSMENT PASSED. SCORE: ${score}. LESSON COMPLETE.`);
+      const module = lessonPlan.modules![quizTarget.m];
+      const lesson = module.lessons[quizTarget.l];
+
+      const newRecord = { ...completedLessons, [lessonKey]: Math.max(score, completedLessons[lessonKey] || 0) };
+      setCompletedLessons(newRecord);
+      localStorage.setItem(`progress_${lessonPlan.id}`, JSON.stringify(newRecord));
+
+      // Submit to Backend for Economy Rewards
+      fetch('http://localhost:8000/submit-assessment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: lesson.title,
+          score: score,
+          max_score: 100,
+          user_id: "anonymous_hero",
+          course_id: lessonPlan.id,
+          module_index: quizTarget.m,
+          lesson_index: quizTarget.l
+        })
+      }).catch(console.error);
+
+      if (score >= 70) {
+        toast.success(`LESSON MASTERED! SCORE: ${score}%`);
+      } else {
+        toast.warning(`ASSESSMENT COMPLETE. SCORE: ${score}%. 70% REQUIRED TO UNLOCK NEXT MODULE.`);
+      }
       setShowQuiz(false);
       setQuizTarget(null);
     }
@@ -95,42 +132,39 @@ function ModularCourseViewer({ lessonPlan, notes, onExit }: { lessonPlan: Lesson
     if (!prevModule) return false;
 
     const prevModuleLessons = prevModule.lessons || [];
-    const allComplete = prevModuleLessons.every((_, lIdx) => completedLessons.has(`${moduleIdx - 1}-${lIdx}`));
+    // UNLOCK CONDITION: All lessons in previous module passed with >= 70%
+    const allComplete = prevModuleLessons.every((_, lIdx) => {
+      const score = completedLessons[`${moduleIdx - 1}-${lIdx}`] || 0;
+      return score >= 70;
+    });
     return !allComplete;
   };
 
   const getModuleProgress = (moduleIdx: number) => {
     const module = lessonPlan.modules?.[moduleIdx];
     if (!module || !module.lessons) return 0;
-    const completedCount = module.lessons.filter((_, lIdx) => completedLessons.has(`${moduleIdx}-${lIdx}`)).length;
+    const completedCount = module.lessons.filter((_, lIdx) => {
+      const score = completedLessons[`${moduleIdx}-${lIdx}`] || 0;
+      return score >= 70;
+    }).length;
     return (completedCount / module.lessons.length) * 100;
   };
 
-  // Render Quiz Overlay
-  if (showQuiz && quizTarget && activeModuleIndex !== null && activeLessonIndex !== null) {
-    const lesson = lessonPlan.modules![activeModuleIndex].lessons[activeLessonIndex];
-    return (
-      <div className="fixed inset-0 z-50 bg-black flex items-center justify-center animate-in fade-in duration-300">
-        <SpaceInvaders
-          topic={lesson.title + " Assessment"}
-          onExit={() => setShowQuiz(false)}
-          mode="assessment"
-          questionCount={3}
-          onPass={handleQuizPass}
-          onFail={handleQuizFail}
-        />
-      </div>
-    )
-  }
-
+  // Render Logic
   if (activeModuleIndex !== null && activeLessonIndex !== null) {
     const module = lessonPlan.modules![activeModuleIndex];
     const lesson = module.lessons[activeLessonIndex];
     const lessonKey = `${activeModuleIndex}-${activeLessonIndex}`;
-    const isComplete = completedLessons.has(lessonKey);
+    const highScore = completedLessons[lessonKey] || 0;
+    const isComplete = highScore >= 70;
 
     return (
       <div className="h-full bg-stone-950 flex flex-col font-serif">
+        {/* Top Course Title Bar */}
+        <div className="bg-stone-950 border-b border-amber-900/20 px-4 py-2 flex items-center shrink-0">
+          <h1 className="text-stone-400 font-serif font-bold text-xs uppercase tracking-[0.2em]">{lessonPlan.title}</h1>
+        </div>
+
         <div className="bg-stone-900 border-b border-amber-900/30 p-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => setActiveLessonIndex(null)} className="text-stone-400 hover:text-amber-500">
@@ -146,60 +180,153 @@ function ModularCourseViewer({ lessonPlan, notes, onExit }: { lessonPlan: Lesson
           </Badge>
         </div>
 
-        <ScrollArea className="flex-1 p-8">
-          <div className="max-w-3xl mx-auto space-y-8">
-            <div className="space-y-4">
-              <h1 className="text-2xl font-bold text-amber-500 uppercase tracking-widest">{lesson.title}</h1>
-              <div className="flex items-center gap-4 text-xs font-mono text-stone-500 border-b border-stone-800 pb-4">
-                <span className="flex items-center gap-2"><Clock className="w-4 h-4" /> {lesson.duration}</span>
-                <span className="flex items-center gap-2"><User className="w-4 h-4" /> {lessonPlan.teacherName}</span>
-              </div>
-              <div className="prose prose-invert prose-amber max-w-none text-stone-300">
-                <ReactMarkdown
-                  remarkPlugins={[remarkMath, remarkGfm]}
-                  rehypePlugins={[rehypeKatex]}
-                  components={{
-                    h1: ({ node, ...props }: any) => <h1 className="text-xl font-bold uppercase tracking-widest text-amber-500 mt-6 mb-4" {...props} />,
-                    h2: ({ node, ...props }: any) => <h2 className="text-lg font-bold uppercase tracking-wide text-stone-200 mt-6 mb-3 border-b border-stone-800 pb-2" {...props} />,
-                    h3: ({ node, ...props }: any) => <h3 className="text-base font-bold text-amber-600 mt-4 mb-2" {...props} />,
-                    p: ({ node, ...props }: any) => <p className="mb-4 leading-relaxed" {...props} />,
-                    ul: ({ node, ...props }: any) => <ul className="list-disc list-inside space-y-1 mb-4 text-stone-400" {...props} />,
-                    ol: ({ node, ...props }: any) => <ol className="list-decimal list-inside space-y-1 mb-4 text-stone-400" {...props} />,
-                    li: ({ node, ...props }: any) => <li className="pl-2" {...props} />,
-                    blockquote: ({ node, ...props }: any) => <blockquote className="border-l-2 border-amber-500/50 pl-4 italic text-stone-500 my-4" {...props} />,
-                    strong: ({ node, ...props }: any) => <strong className="text-amber-500 font-bold" {...props} />,
-                    em: ({ node, ...props }: any) => <em className="text-amber-200" {...props} />,
-                    code: ({ node, className, children, ...props }: any) => {
-                      const match = /language-(\w+)/.exec(className || "");
-                      return match ? (
-                        <div className="bg-stone-900 border border-stone-800 p-4 rounded-none my-4 overflow-x-auto font-mono text-sm text-stone-300">
-                          <code className={className} {...props}>{children}</code>
-                        </div>
-                      ) : (
-                        <code className="bg-stone-800 px-1.5 py-0.5 rounded-sm text-amber-500 font-mono text-xs border border-stone-700" {...props}>{children}</code>
-                      );
-                    }
-                  }}
-                >
-                  {lesson.content || lesson.description || "No content available."}
-                </ReactMarkdown>
-              </div>
-            </div>
+        {showQuiz ? (
+          <div className="flex-1 bg-stone-950 p-4 flex flex-col items-center justify-center min-h-0">
+            {!selectedGame ? (
+              <GameLauncher
+                onSelectGame={setSelectedGame}
+                onExit={() => setShowQuiz(false)}
+              />
+            ) : (
+              <div className={`w-full max-w-5xl aspect-[4/3] border-4 border-stone-800 bg-black rounded-lg overflow-hidden shadow-[0_0_50px_rgba(217,119,6,0.1)] relative transition-colors duration-500 ${selectedGame === 'excavation' ? 'border-amber-900/40' : ''}`}>
+                <div className="absolute top-0 left-0 right-0 bg-stone-900/80 border-b border-stone-800 p-2 flex justify-between items-center z-10 backdrop-blur-sm">
+                  <div className="flex items-center gap-2">
+                    <div
+                      onClick={() => setSelectedGame(null)}
+                      className="cursor-pointer hover:bg-stone-800 p-1 rounded transition-colors text-stone-500 hover:text-white"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs text-amber-500 font-bold uppercase tracking-widest border-l border-stone-700 pl-2">
+                      {selectedGame === 'shmup' ? 'Defense Protocol' : selectedGame === 'excavation' ? 'Excavation Protocol' : 'Traffic Control Protocol'}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    <span className="text-[10px] text-stone-400 font-mono">LIVE FEED</span>
+                  </div>
+                </div>
 
-            <div className="pt-12 flex justify-center">
-              {!isComplete ? (
-                <Button onClick={() => initiateLessonCompletion(activeModuleIndex, activeLessonIndex)} className="bg-amber-600 hover:bg-amber-700 text-stone-950 font-bold px-8 py-6 rounded-none uppercase tracking-widest shadow-[0_0_20px_rgba(217,119,6,0.2)]">
-                  <CheckCircle2 className="w-5 h-5 mr-3" />
-                  INITIATE ASSESSMENT
-                </Button>
-              ) : (
-                <Button variant="outline" disabled className="border-amber-900/30 text-amber-700 cursor-not-allowed opacity-50 px-8 py-6 rounded-none uppercase tracking-widest">
-                  Lesson Verified
-                </Button>
-              )}
-            </div>
+                {selectedGame === 'shmup' ? (
+                  <SpaceInvaders
+                    key={`shmup-${activeModuleIndex}-${activeLessonIndex}`}
+                    topic={lessonPlan.title}
+                    courseId={lessonPlan.id}
+                    contextNotes={notes.filter(n => n.lessonPlanId === lessonPlan.id).map(n => n.content)}
+                    contextContent={lesson.content}
+                    onPass={(score) => handleQuizPass(score)}
+                    onFail={handleQuizFail}
+                    onExit={() => setShowQuiz(false)}
+                    questionCount={3}
+                  />
+                ) : selectedGame === 'excavation' ? (
+                  <ExcavationGame
+                    key={`dig-${activeModuleIndex}-${activeLessonIndex}`}
+                    courseId={lessonPlan.id}
+                    topic={lessonPlan.title}
+                    contextContent={lesson.content}
+                    question={`Identify the core principle of: ${lesson.title}`} // Fallback
+                    options={["Analysis", "Synthesis", "Evaluation", "Application"]} // Fallback
+                    correctOptionIndex={0}
+                    onPass={(score) => handleQuizPass(score)}
+                    onFail={handleQuizFail}
+                    onExit={() => setShowQuiz(false)}
+                  />
+                ) : (
+                  <RedLightGreenLightGame
+                    key={`protocol-${activeModuleIndex}-${activeLessonIndex}`}
+                    courseId={lessonPlan.id}
+                    topic={lesson.title}
+                    contextContent={lesson.content}
+                    contextNotes={notes.filter(n => n.lessonPlanId === lessonPlan.id).map(n => n.content)}
+                    question={lesson.quiz?.question || `Identify the core principle of: ${lesson.title}`}
+                    options={lesson.quiz?.options || ["Analysis", "Synthesis", "Evaluation", "Application"]}
+                    correctOptionIndex={lesson.quiz?.correctIndex ?? 0}
+                    onPass={(score) => {
+                      handleQuizPass(score);
+                      toast.success("Protocol Passed! Credits Awarded.");
+                    }}
+                    onFail={() => {
+                      toast.error("Protocol Failed. Try Again.");
+                    }}
+                    onExit={() => {
+                      setShowQuiz(false);
+                      setSelectedGame(null);
+                    }}
+                  />
+                )}
+              </div>
+            )}
           </div>
-        </ScrollArea>
+        ) : (
+          <ScrollArea className="flex-1 p-8">
+            <div className="max-w-3xl mx-auto space-y-8">
+              <div className="space-y-4">
+                <h1 className="text-2xl font-bold text-amber-500 uppercase tracking-widest">{lesson.title}</h1>
+                <div className="flex items-center gap-4 text-xs font-mono text-stone-500 border-b border-stone-800 pb-4">
+                  <span className="flex items-center gap-2"><Clock className="w-4 h-4" /> {lesson.duration}</span>
+                  <span className="flex items-center gap-2"><User className="w-4 h-4" /> {lessonPlan.teacherName}</span>
+                </div>
+                <div className="prose prose-invert prose-amber max-w-none text-stone-300">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkMath, remarkGfm]}
+                    rehypePlugins={[rehypeKatex]}
+                    components={{
+                      h1: ({ node, ...props }: any) => <h1 className="text-xl font-bold uppercase tracking-widest text-amber-500 mt-6 mb-4" {...props} />,
+                      h2: ({ node, ...props }: any) => <h2 className="text-lg font-bold uppercase tracking-wide text-stone-200 mt-6 mb-3 border-b border-stone-800 pb-2" {...props} />,
+                      h3: ({ node, ...props }: any) => <h3 className="text-base font-bold text-amber-600 mt-4 mb-2" {...props} />,
+                      p: ({ node, ...props }: any) => <p className="mb-4 leading-relaxed" {...props} />,
+                      ul: ({ node, ...props }: any) => <ul className="list-disc list-inside space-y-1 mb-4 text-stone-400" {...props} />,
+                      ol: ({ node, ...props }: any) => <ol className="list-decimal list-inside space-y-1 mb-4 text-stone-400" {...props} />,
+                      li: ({ node, ...props }: any) => <li className="pl-2" {...props} />,
+                      blockquote: ({ node, ...props }: any) => <blockquote className="border-l-2 border-amber-500/50 pl-4 italic text-stone-500 my-4" {...props} />,
+                      strong: ({ node, ...props }: any) => <strong className="text-amber-500 font-bold" {...props} />,
+                      em: ({ node, ...props }: any) => <em className="text-amber-200" {...props} />,
+                      code: ({ node, className, children, ...props }: any) => {
+                        const match = /language-(\w+)/.exec(className || "");
+                        return match ? (
+                          <div className="bg-stone-900 border border-stone-800 p-4 rounded-none my-4 overflow-x-auto font-mono text-sm text-stone-300">
+                            <code className={className} {...props}>{children}</code>
+                          </div>
+                        ) : (
+                          <code className="bg-stone-800 px-1.5 py-0.5 rounded-sm text-amber-500 font-mono text-xs border border-stone-700" {...props}>{children}</code>
+                        );
+                      }
+                    }}
+                  >
+                    {lesson.content || lesson.description || "No content available."}
+                  </ReactMarkdown>
+                </div>
+              </div>
+
+              <div className="pt-12 flex justify-center">
+                <div className="flex flex-col items-center gap-4 w-full max-w-md">
+                  <Button
+                    onClick={() => initiateLessonCompletion(activeModuleIndex, activeLessonIndex)}
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-stone-950 font-bold px-8 py-6 rounded-none uppercase tracking-widest shadow-[0_0_20px_rgba(217,119,6,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!lesson.content || lesson.content.length < 50}
+                  >
+                    {(!lesson.content || lesson.content.length < 50) ? "CONTENT MISSING - CANNOT ASSESS" : (isComplete ? "RE-INITIATE ASSESSMENT" : "INITIATE ASSESSMENT")}
+                    {!(!lesson.content || lesson.content.length < 50) && <CheckCircle2 className="w-5 h-5 ml-3" />}
+                  </Button>
+
+                  <div className="flex flex-col items-center gap-1">
+                    {highScore > 0 && (
+                      <div className={`font-mono text-sm font-bold ${highScore >= 70 ? "text-emerald-500" : "text-amber-500"}`}>
+                        BEST SCORE: {highScore}%
+                      </div>
+                    )}
+                    <div className="text-stone-500 text-[10px] uppercase tracking-widest flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500/20"></span>
+                      {highScore >= 70 ? "REWARD CLAIMED (0 LEPTA)" : "REWARD AVAILABLE: 50 LEPTA"}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </ScrollArea>
+        )}
       </div>
     );
   }
@@ -256,7 +383,8 @@ function ModularCourseViewer({ lessonPlan, notes, onExit }: { lessonPlan: Lesson
                   <div className="border-t border-stone-800 bg-stone-950/30 p-4 space-y-2 animate-in slide-in-from-top-2">
                     {module.lessons.map((lesson, lIdx) => {
                       const lessonKey = `${mIdx}-${lIdx}`;
-                      const complete = completedLessons.has(lessonKey);
+                      const score = completedLessons[lessonKey] || 0;
+                      const complete = score >= 70;
                       return (
                         <div
                           key={lIdx}
@@ -279,6 +407,22 @@ function ModularCourseViewer({ lessonPlan, notes, onExit }: { lessonPlan: Lesson
               </Card>
             );
           })}
+
+          {lessonPlan.citations && lessonPlan.citations.length > 0 && (
+            <div className="mt-12 mb-8 border-t border-stone-800 pt-8">
+              <div className="flex items-center gap-3 mb-6">
+                <BookOpen className="w-5 h-5 text-stone-500" />
+                <h3 className="text-stone-500 font-bold uppercase tracking-widest text-sm">Course References (APA)</h3>
+              </div>
+              <div className="grid gap-3">
+                {lessonPlan.citations.map((citation) => (
+                  <div key={citation.id} className="bg-stone-900/50 border border-stone-800 p-4 font-mono text-xs text-stone-400 hover:border-amber-900/30 hover:bg-stone-900 transition-colors cursor-text selection:bg-amber-900/50 selection:text-amber-200">
+                    <p className="leading-relaxed pl-6 -indent-6">{citation.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>

@@ -63,7 +63,7 @@ export function StudentView({
   const [recentlyUnfavorited, setRecentlyUnfavorited] = useState<{ planId: string, timeout: ReturnType<typeof setTimeout> } | null>(null);
 
   // Get unique subjects
-  const subjects = ["all", ...Array.from(new Set(lessonPlans.map(plan => plan.subject)))];
+  const subjects = ["all", ...Array.from(new Set((lessonPlans || []).map(plan => plan.subject || "General")))];
 
   // Filter lesson plans
   const filteredPlans = lessonPlans.filter(plan => {
@@ -668,7 +668,7 @@ export function StudentView({
                   Learning Objectives
                 </h3>
                 <ul className="space-y-2 ml-1">
-                  {selectedPlan?.objectives.map((obj, idx) => (
+                  {(selectedPlan?.objectives || []).map((obj, idx) => (
                     <li key={idx} className="text-xs text-stone-400 flex items-start gap-2">
                       <span className="text-amber-700/50 mt-1">•</span>
                       {obj}
@@ -684,7 +684,7 @@ export function StudentView({
                   Materials Needed
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {selectedPlan?.materials.map((material, idx) => (
+                  {(selectedPlan?.materials || []).map((material, idx) => (
                     <Badge key={idx} variant="outline" className="rounded-none border-stone-700 text-stone-400 bg-stone-900/50 uppercase tracking-widest text-[10px]">{material}</Badge>
                   ))}
                 </div>
@@ -697,7 +697,7 @@ export function StudentView({
                   Activity Log
                 </h3>
                 <div className="relative border-l border-stone-800 ml-2 space-y-4 py-2">
-                  {selectedPlan?.activities.map((activity, idx) => (
+                  {(selectedPlan?.activities || []).map((activity, idx) => (
                     <div key={idx} className="relative pl-6">
                       <div className="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-stone-900 border border-amber-900/50 flex items-center justify-center">
                         <div className="w-1 h-1 rounded-full bg-amber-700" />

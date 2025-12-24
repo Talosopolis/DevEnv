@@ -23,31 +23,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 rag_service = RAGService()
 course_generator = CourseGenerator()
+from persistence_service import PersistenceService
+persistence_service = PersistenceService()
 
 
 # In-memory store for generated courses (Production would use Firestore)
-COURSES_DB = {}
+COURSES_DB = persistence_service.load_courses()
 
 # --- AERGUS MODERATOR ---
 from aergus import aergus, SafetyToken
 
 
-class QuizRequest(BaseModel):
-    topic: str
-    difficulty: str = "medium"
-    course_id: Optional[str] = None # Added for per-class scoping
-    user_context: Optional[str] = None
-    question_index: Optional[int] = None # Support sequential access
-    previous_questions: List[str] = [] # For deduplication
-    user_id: str = "anonymous_hero"
+
 
 class AssessmentResult(BaseModel):
     topic: str
     score: int
     max_score: int
     user_id: str
+    course_id: Optional[str] = None
+    module_index: Optional[int] = None
+    lesson_index: Optional[int] = None
 
 class AnomalyReport(BaseModel):
     user_id: str
@@ -106,6 +105,7 @@ async def ingest_file(course_id: str = Form(...), file: UploadFile = File(...), 
         
         # Save to DB
         COURSES_DB[course_id] = course_structure
+        persistence_service.save_courses(COURSES_DB)
 
         # Index text for RAG
         rag_service.add_text_to_index(course_id, file.filename, raw_text)
@@ -125,6 +125,42 @@ async def get_course(course_id: str):
         return COURSES_DB[course_id]
     raise HTTPException(status_code=404, detail="Course not found")
 
+@app.get("/courses/user/{user_id}")
+async def get_user_courses(user_id: str):
+    """
+    Returns all courses. In a real app, filtering by user_id would happen here.
+    For MVP/Demo, we return all courses in DB.
+    """
+    courses = []
+    for cid, data in COURSES_DB.items():
+        # Handle both dict and Pydantic models (just in case)
+        if hasattr(data, 'dict'): 
+            course_data = data.dict()
+        else:
+            course_data = dict(data)
+            
+        # Inject ID if missing
+        if 'id' not in course_data: course_data['id'] = cid
+        
+        # Inject Defaults for Frontend Compatibility
+        if "subject" not in course_data: course_data["subject"] = "General"
+        if "grade" not in course_data: course_data["grade"] = "Unspecified"
+        if "teacherName" not in course_data: course_data["teacherName"] = "AI Archivist"
+        if "duration" not in course_data: course_data["duration"] = "Self-Paced"
+        if "status" not in course_data: course_data["status"] = "published"
+        if "ownerId" not in course_data: course_data["ownerId"] = "anonymous_hero"
+        if "isPublic" not in course_data: course_data["isPublic"] = True
+        
+        # Ensure array fields are lists, not None/Missing
+        if "objectives" not in course_data or course_data["objectives"] is None: course_data["objectives"] = []
+        if "materials" not in course_data or course_data["materials"] is None: course_data["materials"] = []
+        if "activities" not in course_data or course_data["activities"] is None: course_data["activities"] = []
+        if "modules" not in course_data or course_data["modules"] is None: course_data["modules"] = []
+        
+        courses.append(course_data)
+        
+    return courses
+
 class LessonGenerationRequest(BaseModel):
     course_id: str
     topic: str
@@ -134,6 +170,8 @@ class LessonGenerationRequest(BaseModel):
     objectives: List[str] = []
     materials: List[str] = []
     description: Optional[str] = ""
+    module_index: Optional[int] = None
+    lesson_index: Optional[int] = None
 
 @app.post("/generate-lesson")
 async def generate_lesson(request: LessonGenerationRequest):
@@ -165,6 +203,22 @@ async def generate_lesson(request: LessonGenerationRequest):
     # 2. Generate
     content = await course_generator.generate_lesson_content(request.topic, full_context, request.level)
     
+    # 3. AUTO-SAVE Persistence
+    # If we know where this lesson belongs, save it immediately to prevent data loss.
+    if request.course_id and request.course_id in COURSES_DB and request.module_index is not None and request.lesson_index is not None:
+        try:
+             # Basic bounds check
+             course = COURSES_DB[request.course_id]
+             if "modules" in course and 0 <= request.module_index < len(course["modules"]):
+                 module = course["modules"][request.module_index]
+                 if "lessons" in module and 0 <= request.lesson_index < len(module["lessons"]):
+                     # Update and Save
+                     module["lessons"][request.lesson_index]["content"] = content
+                     persistence_service.save_courses(COURSES_DB)
+                     print(f"Auto-saved content for {request.course_id} M{request.module_index}:L{request.lesson_index}")
+        except Exception as e:
+             print(f"Warning: Auto-save failed: {e}")
+
     return {"content": content, "cost_incurred": COST}
 
 @app.post("/submit-assessment")
@@ -174,8 +228,15 @@ async def submit_assessment(result: AssessmentResult):
     """
     percentage = (result.score / result.max_score) * 100 if result.max_score > 0 else 0
     
-    # reward user for completing assessment? (Optional gamification)
-    # economy.refill(result.user_id, 1) # Maybe later
+    # Reward Logic: First time pass (>= 70%) gets 50 Lepta
+    if result.course_id and result.module_index is not None and result.lesson_index is not None:
+        if percentage >= 70:
+            event_id = f"LESSON_COMPLETE_{result.course_id}_{result.module_index}_{result.lesson_index}"
+            rewarded = economy.award_reward(result.user_id, 50, event_id)
+            if rewarded:
+                print(f"🎉 Awarded 50 Lepta to {result.user_id} for completing {result.topic}")
+    
+    # Adaptive Logic Placeholder
     
     # Adaptive Logic Placeholder
     if percentage >= 80:
@@ -292,12 +353,25 @@ def scrub_pii(text: Optional[str]) -> Optional[str]:
     text = re.sub(r'[\w\.-]+@[\w\.-]+', '[REDACTED_EMAIL]', text)
     return text
 
+class QuizRequest(BaseModel):
+    topic: str
+    dataset: str = "default"
+    question_count: int = 1
+    difficulty: str = "medium" # easy, medium, hard, spartan
+    user_id: str = "anonymous"
+    user_context: Optional[str] = None
+    course_id: Optional[str] = None
+    question_index: int = 0
+    previous_questions: List[str] = []
+    context_notes: List[str] = [] # New: Explicit context from lesson notes
+    context_content: Optional[str] = "" # New: Full lesson content fallback
+
 @app.post("/generate-quiz")
 async def generate_quiz(request: QuizRequest):
     """
-    Generates a quiz question using Gemini 2.5 Flash, or serves from hardcoded set for Spartan/Greece.
-    Protected by AERGUS.
+    Generates a quiz using Gemini 2.5 Flash.
     """
+    print(f"DEBUG: Quiz Payload: Topic={request.topic}, NotesLen={len(request.context_notes)}, ContentLen={len(request.context_content or '')}", flush=True)
     
     # Economy Check: 1 Obol per Arcade Round
     ARCADE_COST = 1.0
@@ -305,61 +379,84 @@ async def generate_quiz(request: QuizRequest):
         raise HTTPException(status_code=402, detail=f"Insufficient Obols for Arcade. Cost: {ARCADE_COST}")
 
     # --- ROUTING LOGIC ---
-    # 1. Course Cartridge Mode (RAG)
+    
+    # 0. CHECK FOR EXPLICIT CONTEXT NOTES (Assessment Mode)
+    # If explicit notes are provided (from Assessment), ALWAYS trust the LLM to use them.
+    if (request.context_notes and len(request.context_notes) > 0) or (request.context_content and len(request.context_content) > 10):
+         print(f"Quiz Generation: Using Explicit Context (Notes: {len(request.context_notes)}, Content: {len(request.context_content or '')} chars)")
+         pass # Fall through to Gen AI Logic
+
+    # 1. FORCE MATH GEN for specific keywords regardless of course (unless purely conceptual requested)
+    # The user specifically requested MathGen for math courses to ensure quality scaling.
+    elif any(kw in request.topic.lower() for kw in ["math", "calc", "algebra", "trig", "geom", "equation", "linear", "quadratic", "number", "arithmetic"]):
+        print(f"DEBUG: Math Gen Triggered for topic {request.topic}")
+        # Check if we should use the hardcoded generator (which has good difficulty scaling)
+        # OR if we trust the LLM. 
+        # User said: "Heavily prefer actual math questions... when the course is tagged for Math"
+        # Let's try to trust the LLM *with the new prompt* first, but if it fails, fallback?
+        # Actually, the user liked the "pythagorean identity" (which likely came from logic) but wanted more.
+        # Let's USE the math_gen for these topics as a priority override if it covers them.
+        try:
+             from math_gen import generate_math_question
+             # Verify math_gen success before returning
+             q = generate_math_question(request.difficulty, request.topic)
+             if q: return q
+        except:
+             pass 
+
+    # 2. Course Cartridge Mode (RAG)
     if request.course_id:
         pass # Fall through to RAG logic
 
-    # 2. Arcade Mode (Generic Math)
-    # If no course selected, or explicit math request
-    elif request.topic == "math" or not request.topic:
+    # 3. Arcade Mode (Generic Math) - Only if no courseID and no context notes
+    elif (request.topic == "math" or not request.topic) and not request.course_id:
         from math_gen import generate_math_question
-        return generate_math_question(request.difficulty)
-    
-    # 3. Default Fallback
-    # If topic is something else but no course_id, we try AI generation anyway?
-    # For safety, let's default to Math to avoid hallucinating on random topics without ground truth.
-    else:
-        from math_gen import generate_math_question
-        return generate_math_question(request.difficulty)
+        q = generate_math_question(request.difficulty, request.topic)
+        print(f"DEBUG: Math Gen Result: {q}")
+        return q
 
 
     # --- GEN AI LOGIC ---
     
-    # 1. Aergus Scan (Context + Topic)
+    # Aergus Scan (Context + Topic)
     combined_input = f"{request.topic} {request.user_context or ''}"
     passed, token, reason = aergus.scan_message(combined_input, request.user_id)
     if not passed:
-        # Penalize and fallback to safe/dumb mode or block
         raise HTTPException(status_code=403, detail=f"Aergus Blocked Quiz Generation: {reason}")
 
-    # Compliance check: Scrub PII from user_context
     clean_context = scrub_pii(request.user_context)
 
-    # 1. Aergus Scan (Required for RAG Access)
-    # Even though this is internal logic, we scan the topic to generate a safety token
+    # Aergus Scan (Topic only)
     passed, token, reason = aergus.scan_message(request.topic, request.user_id)
     if not passed:
-        # If the topic itself is unsafe (e.g. "How to build a bomb"), we block the quiz
          raise HTTPException(status_code=403, detail=f"Aergus Blocked Quiz Generation: {reason}")
 
-    # 1.5 Retrieve Course Context (RAG)
+    # Retrieve Course Context
     course_context = ""
     if request.course_id:
-        # Search specifically within this course content
-        course_context = rag_service.search_context(request.topic, token, request.course_id)
+        # Map Difficulty Label to 1-10 Range
+        diff_range = (1, 10)
+        d_lower = request.difficulty.lower()
+        if d_lower == "easy": diff_range = (1, 4)
+        elif d_lower == "medium": diff_range = (4, 7)
+        elif d_lower == "hard": diff_range = (7, 9)
+        elif d_lower == "elite" or d_lower == "spartan" or d_lower == "streamer": diff_range = (8, 10)
+        
+        # Search with difficulty filter
+        course_context = rag_service.search_context(
+            request.topic, 
+            token, 
+            request.course_id,
+            min_diff=diff_range[0],
+            max_diff=diff_range[1]
+        )
         if course_context:
             print(f"Quiz Generation using Context from {request.course_id}")
     
-    # Real AI generation
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        # Fallback to mock if no key
-        return {
-            "question": f"What is the primary function of a {request.topic} in a microservices architecture? (Mock)",
-            "options": ["To make coffee", "To decouple services", "To increase complexity", "To reduce latency"],
-            "correct_option_index": 1,
-            "explanation": "This is a mock response because GOOGLE_API_KEY is not set."
-        }
+        from math_gen import generate_math_question
+        return generate_math_question(request.difficulty)
 
     try:
         from google import genai
@@ -368,14 +465,50 @@ async def generate_quiz(request: QuizRequest):
         
         client = genai.Client(api_key=api_key)
         
+        # STRICTER PROMPT
+        # STRICTER PROMPT - CONTEXT SCOPING
+        # Determine Primary Source
+        primary_source = ""
+        if request.context_notes and len(request.context_notes) > 0:
+             primary_source = "USER NOTES:\n" + "\n".join(request.context_notes)
+        elif request.context_content and len(request.context_content) > 10:
+             primary_source = "LESSON TEXT:\n" + request.context_content
+        
+        # If we have a primary source (Layout/Notes), we should STRICTLY limit to it.
+        # If not, we fall back to RAG (Course Context).
+        
+        scope_instruction = ""
+        if primary_source:
+             print(f"DEBUG: Primary Source Logic Active. Content Preview: {primary_source[:200]}...")
+             scope_instruction = "STRICT INSTRUCTION: Generate a question based *ONLY* on the concepts and definitions explicitly found in the 'PRIMARY SOURCE MATERIAL' below. You MAY assume standard prerequisite knowledge for this level (e.g. Algebra/Trig for Calculus), but do NOT test concepts from future lessons (like Derivatives/Integrals) unless they are explicitly defined in the text. If the text is introductory/conceptual, ask a conceptual question."
+        else:
+             scope_instruction = "Use the provided Course Material to generate a relevant question."
+
         prompt = f"""
         Create a {request.difficulty} quiz question about {request.topic}.
         
-        Relevant Course Material:
-        {course_context}
+        {scope_instruction}
+
+        PRIMARY SOURCE MATERIAL:
+        {primary_source}
+
+        Supplementary Course Material:
+        {course_context if not primary_source else ""}
 
         User Context: {clean_context}. 
         Previously Asked (DO NOT REPEAT): {request.previous_questions}.
+        
+        CRITICAL INSTRUCTIONS:
+        1. **NO METADATA**: Do NOT ask what book a concept comes from. Do NOT ask "In Chapter 3...". Do NOT mention the author.
+        2. **CONCEPTUAL ONLY**: Ask about the *mechanism*, *theory*, or *application* of the concept.
+        3. **MATH/PHYSICS**: If the topic involves math ({request.topic}), you MUST generate a numerical or symbolic problem (e.g., "Solve for x", "Calculate the derivative").
+        4. **DIFFICULTY SCALE**:
+           - Easy: Definitions, simple identification.
+           - Medium: Basic application, one-step problems.
+           - Hard/Elite: Complex multi-step application, synthesis of concepts.
+        5. **FALLBACK**: If the context is just a Table of Contents, IGNORE IT and generate a high-quality standard question about '{request.topic}' using your general knowledge.
+        6. **CONCISENESS**: The question text MUST be distinct and minimal. REMOVE all introductory fluff (e.g., "In the realm of...", "As highlighted in this lesson...", "Given its importance..."). For Math, just state the problem (e.g. "Factor the expression:", "Solve for x:"). MAX LENGTH: 2 Sentences.
+        
         Return JSON with fields: 'question', 'options' (list of 4 strings), 'correct_option_index' (int), and 'explanation'.
         """
         
@@ -437,13 +570,18 @@ async def generate_course(request: GenerateCourseRequest):
         
         structure = await course_generator.generate_structure(
             request.title, 
-            context or f"Course Title: {request.title}. Description: {request.description}"
+            context or f"Course Title: {request.title}. Description: {request.description}",
+            module_count=request.module_count,
+            intensity=request.intensity
         )
         
         # Apply module count constraint (naive slicing or prompt engineering would be better, but this is a start)
         # If structure has more/less modules, the LLM usually tries to follow instructions if passed. 
         # But `generate_structure` signature in `course_generator.py` might not accept params.
         # checking course_generator.py would be wise, but for now assuming it does standard gen.
+        
+        COURSES_DB[request.course_id] = structure
+        persistence_service.save_courses(COURSES_DB)
         
         return structure
     except Exception as e:

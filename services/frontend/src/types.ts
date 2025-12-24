@@ -3,6 +3,11 @@ export type Lesson = {
     duration: string;
     description?: string;
     content?: string; // Markdown/HTML content
+    quiz?: {
+        question: string;
+        options: string[]; // 4 options
+        correctIndex: number;
+    };
 };
 
 export type Module = {
@@ -30,6 +35,7 @@ export type LessonPlan = {
     modules?: Module[];
     status?: 'draft' | 'published';
     totalFileSize?: number;
+    citations?: { id: string; text: string; type: string }[];
 };
 
 export type Note = {

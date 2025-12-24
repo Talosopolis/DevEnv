@@ -1,6 +1,18 @@
 {
   "anonymous_hero": {
-    "balance": 52.330000000000005,
-    "last_refill": 1766088220.4465277
+    "balance": 92.0,
+    "last_refill": 1766499069.0998948,
+    "completed_events": [
+      "LESSON_COMPLETE_idiot-s-guide-to-calculus-juz4lit_0_0",
+      "LESSON_COMPLETE_idiot-s-guide-to-calculus-juz4lit_0_1"
+    ]
+  },
+  "anonymous": {
+    "balance": 45.0,
+    "last_refill": 1766499127.5045333
+  },
+  "debug_user": {
+    "balance": 9999.0,
+    "last_refill": 1766188587.645911
   }
 }

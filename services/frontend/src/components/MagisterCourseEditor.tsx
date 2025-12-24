@@ -133,7 +133,9 @@ export function MagisterCourseEditor({ courseData, onSave, onBack, isWizardMode 
                     // Pass enriched context
                     description: data.description || "",
                     objectives: data.objectives || [],
-                    materials: data.materials || []
+                    materials: data.materials || [],
+                    module_index: modIndex,
+                    lesson_index: lessonIndex
                 })
             });
 
@@ -352,46 +354,61 @@ export function MagisterCourseEditor({ courseData, onSave, onBack, isWizardMode 
                 {/* TAB 2: CURRICULUM */}
                 <TabsContent value="curriculum" className="flex-1 flex overflow-hidden m-0">
                     {/* Sidebar: Module Structure */}
-                    <div className="w-80 border-r border-stone-800 bg-stone-900/50 flex flex-col">
+                    <div className="w-96 border-r border-stone-800 bg-stone-950 flex flex-col shrink-0">
+                        <div className="p-4 border-b border-stone-800 bg-stone-900/50">
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-stone-500">Course Map</h3>
+                        </div>
                         <ScrollArea className="flex-1">
-                            <div className="p-2 space-y-2">
+                            <div className="p-2 space-y-3">
                                 {data.modules?.map((mod: any, i: number) => (
-                                    <div key={i} className={`border rounded-none transition-all ${expandedModule === i ? 'bg-stone-800 border-amber-900/50' : 'bg-stone-900 border-stone-800 hover:border-stone-700'}`}>
+                                    <div key={i} className="group">
                                         <div
-                                            className="flex items-center justify-between p-3 cursor-pointer"
-                                            onClick={() => setExpandedModule(expandedModule === i ? null : i)}
+                                            className={`border rounded-sm transition-all duration-200 ${expandedModule === i ? 'bg-stone-900 border-amber-900/30' : 'bg-stone-900/30 border-stone-800 hover:border-stone-700'}`}
                                         >
-                                            <div className={`text-sm font-bold uppercase tracking-wide truncate flex-1 ${expandedModule === i ? 'text-amber-500' : 'text-stone-400'}`}>
-                                                {(i + 1).toString().padStart(2, '0')} {mod.title}
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Button size="icon" variant="ghost" className="h-6 w-6 text-stone-600 hover:text-red-500" onClick={(e: MouseEvent) => { e.stopPropagation(); removeModule(i); }}>
-                                                    <Trash2 className="w-3 h-3" />
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {expandedModule === i && (
-                                            <div className="bg-stone-950/50 p-2 space-y-1 border-t border-stone-800">
-                                                {mod.lessons?.map((lesson: any, j: number) => (
-                                                    <div
-                                                        key={j}
-                                                        onClick={() => setEditingLesson({ modIdx: i, lessIdx: j })}
-                                                        className={`pl-4 py-2 pr-2 text-xs font-mono flex items-center justify-between cursor-pointer border-l-2 hover:bg-stone-800/50 ${editingLesson?.modIdx === i && editingLesson?.lessIdx === j ? 'border-amber-500 text-stone-200 bg-stone-800/50' : 'border-stone-800 text-stone-500'}`}
-                                                    >
-                                                        <span className="truncate flex-1">{lesson.title}</span>
-                                                        <ChevronRight className="w-3 h-3 opacity-50" />
+                                            <div
+                                                className="flex items-start justify-between p-3 cursor-pointer select-none"
+                                                onClick={() => setExpandedModule(expandedModule === i ? null : i)}
+                                            >
+                                                <div className="flex items-start gap-3 overflow-hidden">
+                                                    <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold border shrink-0 mt-0.5 ${expandedModule === i ? 'bg-amber-950/30 border-amber-900/50 text-amber-500' : 'bg-stone-800 border-stone-700 text-stone-500'}`}>
+                                                        {(i + 1).toString().padStart(2, '0')}
                                                     </div>
-                                                ))}
-                                                <Button variant="ghost" size="sm" onClick={() => addLesson(i)} className="w-full text-[10px] text-stone-500 hover:text-amber-500 uppercase tracking-widest mt-2 h-6">
-                                                    <Plus className="w-3 h-3 mr-1" /> Add Lesson
-                                                </Button>
+                                                    <div className={`text-xs font-bold uppercase tracking-wide leading-relaxed ${expandedModule === i ? 'text-stone-200' : 'text-stone-400 group-hover:text-stone-300'}`}>
+                                                        {mod.title}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+                                                    <Button size="icon" variant="ghost" className="h-6 w-6 text-stone-600 hover:text-red-500 hover:bg-red-950/20" onClick={(e: MouseEvent) => { e.stopPropagation(); removeModule(i); }}>
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        )}
+
+                                            {expandedModule === i && (
+                                                <div className="bg-stone-950/30 p-2 space-y-1 rounded-b-sm">
+                                                    {mod.lessons?.map((lesson: any, j: number) => (
+                                                        <div
+                                                            key={j}
+                                                            onClick={() => setEditingLesson({ modIdx: i, lessIdx: j })}
+                                                            className={`pl-3 pr-2 py-2 text-xs font-mono flex items-start justify-between cursor-pointer rounded-sm border mb-1 transition-all ${editingLesson?.modIdx === i && editingLesson?.lessIdx === j ? 'bg-amber-950/10 border-amber-900/30 text-amber-500' : 'border-transparent text-stone-500 hover:bg-stone-800 hover:text-stone-300'}`}
+                                                        >
+                                                            <div className="flex items-start gap-2">
+                                                                <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${editingLesson?.modIdx === i && editingLesson?.lessIdx === j ? 'bg-amber-500' : 'bg-stone-800'}`} />
+                                                                <span className="leading-relaxed">{lesson.title}</span>
+                                                            </div>
+                                                            <ChevronRight className={`w-3 h-3 shrink-0 mt-0.5 transition-transform ${editingLesson?.modIdx === i && editingLesson?.lessIdx === j ? 'translate-x-0.5 opacity-100' : 'opacity-0'}`} />
+                                                        </div>
+                                                    ))}
+                                                    <Button variant="ghost" size="sm" onClick={() => addLesson(i)} className="w-full text-[10px] text-stone-500 hover:text-amber-500 hover:bg-stone-900 uppercase tracking-widest h-8 border border-dashed border-stone-800/50 hover:border-amber-900/30">
+                                                        <Plus className="w-3 h-3 mr-1" /> Add Lesson
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
 
-                                <Button variant="outline" onClick={addModule} className="w-full border-dashed border-stone-800 text-stone-600 hover:text-stone-400 hover:border-stone-600 uppercase tracking-widest text-xs h-10">
+                                <Button variant="outline" onClick={addModule} className="w-full border-dashed border-stone-800 text-stone-500 hover:text-stone-300 hover:border-stone-600 hover:bg-stone-900 uppercase tracking-widest text-xs h-12">
                                     <Plus className="w-4 h-4 mr-2" /> Add Module
                                 </Button>
                             </div>
@@ -399,47 +416,54 @@ export function MagisterCourseEditor({ courseData, onSave, onBack, isWizardMode 
                     </div>
 
                     {/* Main Content Area: Lesson Editor */}
-                    <div className="flex-1 flex flex-col bg-stone-950">
+                    <div className="flex-1 flex flex-col bg-stone-950 relative">
                         {editingLesson ? (
                             (() => {
                                 const mod = data.modules[editingLesson.modIdx];
                                 const lesson = mod.lessons[editingLesson.lessIdx];
                                 return (
                                     <>
-                                        <div className="p-6 border-b border-stone-800 flex items-start justify-between">
-                                            <div className="flex-1 mr-8">
-                                                <label className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-1 block">Lesson Title</label>
-                                                <Input
-                                                    value={lesson.title}
-                                                    onChange={(e) => updateLesson(editingLesson.modIdx, editingLesson.lessIdx, 'title', e.target.value)}
-                                                    className="text-xl font-bold bg-transparent border-stone-800 focus:border-amber-500 rounded-none h-12"
-                                                />
+                                        {/* Editor Toolbar / Header */}
+                                        <div className="p-6 border-b border-stone-800 bg-stone-900/20">
+                                            <div className="flex gap-6 items-start">
+                                                <div className="flex-1 space-y-2">
+                                                    <label className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">Lesson Title</label>
+                                                    <Input
+                                                        value={lesson.title}
+                                                        onChange={(e) => updateLesson(editingLesson.modIdx, editingLesson.lessIdx, 'title', e.target.value)}
+                                                        className="text-lg font-bold bg-stone-900/50 border-stone-800 focus:border-amber-500 focus:bg-stone-900 rounded-sm h-10 px-4 transition-colors"
+                                                        placeholder="Enter lesson title..."
+                                                    />
+                                                </div>
+                                                <div className="w-40 space-y-2">
+                                                    <label className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">Duration</label>
+                                                    <Input
+                                                        value={lesson.duration}
+                                                        onChange={(e) => updateLesson(editingLesson.modIdx, editingLesson.lessIdx, 'duration', e.target.value)}
+                                                        className="font-mono text-sm bg-stone-900/50 border-stone-800 focus:border-amber-500 focus:bg-stone-900 rounded-sm h-10 px-3 text-center transition-colors"
+                                                        placeholder="e.g. 15 min"
+                                                    />
+                                                </div>
+                                                <div className="pt-6">
+                                                    <Button size="icon" variant="ghost" className="h-10 w-10 text-stone-600 hover:text-red-500 hover:bg-red-950/10 rounded-sm" onClick={() => removeLesson(editingLesson.modIdx, editingLesson.lessIdx)}>
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            <div className="w-32">
-                                                <label className="text-[10px] uppercase tracking-widest text-stone-500 font-bold mb-1 block">Duration</label>
-                                                <Input
-                                                    value={lesson.duration}
-                                                    onChange={(e) => updateLesson(editingLesson.modIdx, editingLesson.lessIdx, 'duration', e.target.value)}
-                                                    className="font-mono text-sm bg-transparent border-stone-800 focus:border-amber-500 rounded-none h-12"
-                                                />
-                                            </div>
-                                            <Button size="icon" variant="ghost" className="ml-4 mt-6 text-stone-600 hover:text-red-500" onClick={() => removeLesson(editingLesson.modIdx, editingLesson.lessIdx)}>
-                                                <Trash2 className="w-5 h-5" />
-                                            </Button>
                                         </div>
 
-                                        <div className="flex-1 p-6 flex flex-col min-h-0 relative">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <label className="text-[10px] uppercase tracking-widest text-stone-500 font-bold flex items-center gap-2">
-                                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                                    Content (Markdown)
+                                        <div className="flex-1 p-6 flex flex-col min-h-0 relative bg-stone-950">
+                                            <div className="flex items-center justify-between mb-3 bg-stone-900/30 p-2 rounded-sm border border-stone-800/50">
+                                                <label className="text-[10px] uppercase tracking-widest text-stone-500 font-bold flex items-center gap-2 pl-2">
+                                                    <Edit3 className="w-3 h-3" />
+                                                    Editor Mode
                                                 </label>
                                                 <div className="flex gap-2">
                                                     <Button
                                                         size="sm"
                                                         onClick={() => verifyContent(editingLesson.modIdx, editingLesson.lessIdx)}
                                                         disabled={isVerifying || isGenerating}
-                                                        className={`h-8 border text-[10px] uppercase tracking-widest font-bold ${verificationResult ? (verificationResult.status === 'pass' ? 'bg-emerald-900/20 text-emerald-500 border-emerald-900' : 'bg-red-900/20 text-red-500 border-red-900') : 'bg-stone-900 text-stone-400 border-stone-700 hover:text-amber-500'}`}
+                                                        className={`h-7 px-3 text-[10px] uppercase tracking-widest font-bold rounded-sm transition-all ${verificationResult ? (verificationResult.status === 'pass' ? 'bg-emerald-950/50 text-emerald-500 border border-emerald-900 hover:bg-emerald-900/50' : 'bg-red-950/50 text-red-500 border border-red-900 hover:bg-red-900/50') : 'bg-stone-800 text-stone-400 border border-stone-700 hover:text-amber-500 hover:border-amber-900'}`}
                                                     >
                                                         {isVerifying ? <RefreshCw className="w-3 h-3 mr-2 animate-spin" /> : <ShieldCheck className="w-3 h-3 mr-2" />}
                                                         {verificationResult ? (verificationResult.status === 'pass' ? "Verified" : "Issues Found") : "Quality Check"}
@@ -449,44 +473,46 @@ export function MagisterCourseEditor({ courseData, onSave, onBack, isWizardMode 
                                                         size="sm"
                                                         onClick={() => generateLessonContent(editingLesson.modIdx, editingLesson.lessIdx)}
                                                         disabled={isGenerating || isVerifying}
-                                                        className="h-8 bg-amber-900/20 text-amber-500 border border-amber-900/50 hover:bg-amber-900/40 text-[10px] uppercase tracking-widest font-bold"
+                                                        className="h-7 px-3 bg-amber-950/30 text-amber-500 border border-amber-900/50 hover:bg-amber-900/40 text-[10px] uppercase tracking-widest font-bold rounded-sm"
                                                     >
                                                         {isGenerating ? <RefreshCw className="w-3 h-3 mr-2 animate-spin" /> : <Sparkles className="w-3 h-3 mr-2" />}
                                                         Generate AI
                                                     </Button>
                                                 </div>
                                             </div>
-                                            <Textarea
-                                                value={lesson.content || ""}
-                                                onChange={(e) => updateLesson(editingLesson.modIdx, editingLesson.lessIdx, 'content', e.target.value)}
-                                                className="flex-1 bg-stone-900/50 border-stone-800 focus:border-amber-500/50 rounded-none font-mono text-sm leading-relaxed p-6 resize-none min-h-[600px] text-stone-300 shadow-inner"
-                                                placeholder="# Lesson Content... (Supports Markdown & LaTeX)"
-                                            />
+                                            <div className="flex-1 relative group">
+                                                <Textarea
+                                                    value={lesson.content || ""}
+                                                    onChange={(e) => updateLesson(editingLesson.modIdx, editingLesson.lessIdx, 'content', e.target.value)}
+                                                    className="w-full h-full bg-stone-900/20 border-stone-800 focus:border-amber-500/50 rounded-sm font-mono text-sm leading-relaxed p-4 resize-none text-stone-300 focus:ring-0 focus:bg-stone-900/50 transition-all custom-scrollbar"
+                                                    placeholder="# Lesson Content... (Markdown Supported)"
+                                                />
 
-                                            {/* Verification Result Overlay/Warning */}
-                                            {verificationResult && verificationResult.status === 'fail' && (
-                                                <div className="absolute bottom-6 left-6 right-6 bg-red-950/90 border border-red-500/50 p-4 text-xs shadow-lg backdrop-blur-sm z-10 animate-in slide-in-from-bottom-2">
-                                                    <div className="flex items-start gap-4">
-                                                        <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                                                        <div className="flex-1">
-                                                            <h4 className="text-red-500 font-bold uppercase tracking-widest mb-1">
-                                                                Quality Assurance Flag
-                                                            </h4>
-                                                            <p className="text-stone-300 leading-relaxed">{verificationResult.feedback}</p>
-                                                            {verificationResult.issues && (
-                                                                <ul className="list-disc list-inside mt-2 text-stone-400 space-y-1">
-                                                                    {verificationResult.issues.map((issue: string, k: number) => (
-                                                                        <li key={k}>{issue}</li>
-                                                                    ))}
-                                                                </ul>
-                                                            )}
+                                                {/* Verification Result Overlay/Warning */}
+                                                {verificationResult && verificationResult.status === 'fail' && (
+                                                    <div className="absolute bottom-6 left-6 right-6 bg-red-950/90 border border-red-500/50 p-4 text-xs shadow-lg backdrop-blur-sm z-10 animate-in slide-in-from-bottom-2">
+                                                        <div className="flex items-start gap-4">
+                                                            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                                            <div className="flex-1">
+                                                                <h4 className="text-red-500 font-bold uppercase tracking-widest mb-1">
+                                                                    Quality Assurance Flag
+                                                                </h4>
+                                                                <p className="text-stone-300 leading-relaxed">{verificationResult.feedback}</p>
+                                                                {verificationResult.issues && (
+                                                                    <ul className="list-disc list-inside mt-2 text-stone-400 space-y-1">
+                                                                        {verificationResult.issues.map((issue: string, k: number) => (
+                                                                            <li key={k}>{issue}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                )}
+                                                            </div>
+                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:text-red-200" onClick={() => setVerificationResult(null)}>
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
                                                         </div>
-                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:text-red-200" onClick={() => setVerificationResult(null)}>
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
                                     </>
                                 );
@@ -498,7 +524,7 @@ export function MagisterCourseEditor({ courseData, onSave, onBack, isWizardMode 
                                 <p className="text-xs mt-2 font-mono opacity-50">Or add a new module to begin</p>
                             </div>
                         )}
-                    </div>
+                    </div >
                 </TabsContent>
             </Tabs>
         </div>

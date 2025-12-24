@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+import { Button } from "./components/ui/button";
 import { TeacherView } from "./components/TeacherView";
 import { StudentView } from "./components/StudentView";
 import SpaceInvaders from "./components/SpaceInvaders";
-import { GraduationCap, BookOpen, Gamepad2, Upload, FileType, Search, Hexagon, Quote, Terminal, LogOut } from "lucide-react";
+import GameLauncher, { GameId } from "./components/GameLauncher";
+import ExcavationGame from "./components/ExcavationGame";
+import RedLightGreenLightGame from "./components/RedLightGreenLightGame";
+import { GraduationCap, BookOpen, Gamepad2, Upload, FileType, Search, Hexagon, Quote, Terminal, LogOut, ArrowLeft } from "lucide-react";
 import { Toaster } from "./components/ui/sonner";
+import { toast } from "sonner";
 import { useAuth, AuthProvider } from "./contexts/AuthContext";
 import { SignIn } from "./components/SignIn";
 import { LandingView } from "./components/LandingView";
@@ -46,9 +51,31 @@ function AppContent() {
   const [currentView, setCurrentView] = useState<string>('landing');
   const [dashboardResetKey, setDashboardResetKey] = useState(0);
 
-  // --- STATE INITIALIZATION (Raw Backup Logic) ---
-  // We initialize directly with Mocks, no async loading that might fail.
+  // --- STATE INITIALIZATION (Raw Backup Logic + Persistence) ---
+  // We initialize directly with Mocks, then fetch real data.
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>(mockLessonPlans);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/courses/user/anonymous_hero');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setLessonPlans(prev => {
+              // Merge logic: Add new courses, avoid duplicates by ID
+              const existingIds = new Set(prev.map(p => p.id));
+              const newPlans = data.filter((p: any) => !existingIds.has(p.id));
+              return [...newPlans, ...prev]; // Put new (user created) courses first
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch persistent courses", e);
+      }
+    };
+    fetchCourses();
+  }, []);
   const [notes, setNotes] = useState<Note[]>(mockNotes);
   const [conversations, setConversations] = useState<Conversation[]>(mockConversations);
 
@@ -73,10 +100,11 @@ function AppContent() {
       }
     };
     fetchBalance();
-    const interval = setInterval(fetchBalance, 10000); // Poll every 10s
+    const interval = setInterval(fetchBalance, 30000); // Poll every 30s
     return () => clearInterval(interval);
   }, []);
   const [generatedCourse, setGeneratedCourse] = useState<any | null>(null);
+  const [selectedArcadeGame, setSelectedArcadeGame] = useState<GameId | null>(null);
 
   // --- NAVIGATION ---
   useEffect(() => {
@@ -383,12 +411,75 @@ function AppContent() {
                       ))}
                     </div>
                   </div>
+                ) : !selectedArcadeGame ? (
+                  <div className="flex flex-col items-center justify-center min-h-[600px]">
+                    <div className="w-full max-w-4xl">
+                      <Button
+                        onClick={() => setActiveGameLesson(null)}
+                        variant="ghost"
+                        className="mb-4 text-stone-500 hover:text-amber-500 uppercase tracking-widest text-xs"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" /> Return to Cartridges
+                      </Button>
+                      <GameLauncher
+                        onSelectGame={setSelectedArcadeGame}
+                        onExit={() => setActiveGameLesson(null)}
+                      />
+                    </div>
+                  </div>
                 ) : (
-                  <SpaceInvaders
-                    topic={activeGameLesson.title}
-                    courseId={activeGameLesson.id}
-                    onExit={() => setActiveGameLesson(null)}
-                  />
+                  <div className="w-full max-w-5xl mx-auto aspect-[4/3] relative bg-black border-4 border-stone-800 rounded-lg overflow-hidden shadow-2xl">
+                    <div className="absolute top-0 left-0 right-0 z-10 p-2 flex justify-between items-center bg-stone-900/80 backdrop-blur-sm border-b border-stone-800">
+                      <div
+                        className="flex items-center gap-2 cursor-pointer group"
+                        onClick={() => setSelectedArcadeGame(null)}
+                      >
+                        <ArrowLeft className="w-4 h-4 text-stone-500 group-hover:text-amber-500 transition-colors" />
+                        <span className="text-[10px] text-stone-500 group-hover:text-stone-300 font-mono uppercase tracking-widest">
+                          {selectedArcadeGame === 'shmup' ? 'Talos Defense' : selectedArcadeGame === 'excavation' ? 'Excavation' : 'Roads\' Scholar'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                        <span className="text-[10px] text-stone-500 tracking-widest">LIVE SIMULATION</span>
+                      </div>
+                    </div>
+
+                    {selectedArcadeGame === 'shmup' && (
+                      <SpaceInvaders
+                        topic={activeGameLesson.title}
+                        courseId={activeGameLesson.id}
+                        onExit={() => setSelectedArcadeGame(null)}
+                      />
+                    )}
+                    {selectedArcadeGame === 'excavation' && (
+                      <ExcavationGame
+                        courseId={activeGameLesson.id}
+                        topic={activeGameLesson.title}
+                        contextContent={activeGameLesson.description}
+                        question="Excavation Protocol Active"
+                        options={["A", "B", "C", "D"]}
+                        correctOptionIndex={0}
+                        onPass={(score) => toast.success(`Score Uploaded: ${score}`)}
+                        onFail={() => toast.error("Simulation Failed")}
+                        onExit={() => setSelectedArcadeGame(null)}
+                      />
+                    )}
+                    {selectedArcadeGame === 'protocol' && (
+                      <RedLightGreenLightGame
+                        courseId={activeGameLesson.id}
+                        topic={activeGameLesson.title}
+                        contextContent={activeGameLesson.description}
+                        // Note: We don't have modules here, just the lesson plan generic info
+                        question="Traffic Control Active"
+                        options={["Proceed", "Halt", "Yield", "Merge"]}
+                        correctOptionIndex={0}
+                        onPass={(score) => toast.success(`Protocol Efficiency: ${score}`)}
+                        onFail={() => { }}
+                        onExit={() => setSelectedArcadeGame(null)}
+                      />
+                    )}
+                  </div>
                 )}
               </TabsContent>
             </Tabs>

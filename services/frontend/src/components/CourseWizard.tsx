@@ -112,6 +112,18 @@ export function CourseWizard({ onCancel, onFinish, existingData }: CourseWizardP
                         duration: duration, // Override basic info duration with calculated one
                         modules: structure.modules || [], // Expecting { modules: [...] } from backend
                         files: files.map(f => f.file.name),
+                        citations: files.map(f => {
+                            const date = new Date(f.file.lastModified);
+                            const year = date.getFullYear();
+                            const title = f.file.name.replace(/\.[^/.]+$/, "");
+                            const ext = f.file.name.split('.').pop()?.toUpperCase() || "FILE";
+                            // APA 7th Edition for unknown author: Title. (Year). [Format]. Source.
+                            return {
+                                id: Math.random().toString(36).substring(7),
+                                text: `${title}. (${year}). [${ext}]. Talosopolis Knowledge Base.`,
+                                type: 'source_upload'
+                            };
+                        }),
                         config,
                         // Preserve ID if editing, or let TeacherView assign new ID
                         // If existingData had an ID, we might need to preserve it, but CourseWizard output 

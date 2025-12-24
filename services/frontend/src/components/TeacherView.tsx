@@ -65,6 +65,18 @@ export function TeacherView({
   const [editingPlan, setEditingPlan] = useState<LessonPlan | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<LessonPlan | null>(null);
   const [recentlyDeleted, setRecentlyDeleted] = useState<{ plan: LessonPlan, timeout: ReturnType<typeof setTimeout> } | null>(null);
+
+  // Default empty course data for the Editor Tab
+  const [editorData, setEditorData] = useState<any>({
+    title: "New Course Specification",
+    subject: "General",
+    grade: "Unspecified",
+    duration: "4 weeks",
+    description: "Enter course abstract here...",
+    modules: [],
+    materials: [],
+    objectives: []
+  });
   const [extractedPlan, setExtractedPlan] = useState<Omit<LessonPlan, "id" | "createdAt"> | null>(null);
   const [addingNoteToLesson, setAddingNoteToLesson] = useState<LessonPlan | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
@@ -315,7 +327,7 @@ export function TeacherView({
   // Filter out recently deleted lessons and separate by status AND filter by Owner ID
   const displayedLessonPlans = lessonPlans.filter(plan => {
     const notDeleted = !recentlyDeleted || recentlyDeleted.plan.id !== plan.id;
-    const isOwner = plan.ownerId === user?.id || (!plan.ownerId && user?.id === 'anonymous_hero');
+    const isOwner = plan.ownerId === user?.id || plan.ownerId === 'anonymous_hero' || (!plan.ownerId && user?.id === 'anonymous_hero');
     return notDeleted && (plan.status === 'published' || !plan.status) && isOwner;
   });
 
@@ -639,6 +651,21 @@ export function TeacherView({
         />
       </TabsContent>
 
+      <TabsContent value="editor" className="m-0 pb-20">
+        <MagisterCourseEditor
+          courseData={editorData}
+          onSave={(data, status) => {
+            setEditorData(data);
+            if (status === 'published') {
+              handleAdd({ ...data, status: 'published' });
+              toast.success("Course Published to Archive");
+            } else {
+              toast.success("Draft Saved Locally");
+            }
+          }}
+        />
+      </TabsContent>
+
       <TabsContent value="conversations" className="m-0 pb-20">
         <ConversationReview
           conversations={conversations}
@@ -662,6 +689,13 @@ export function TeacherView({
         >
           <FileText className="w-5 h-5" />
           <span>Docs</span>
+        </TabsTrigger>
+        <TabsTrigger
+          value="editor"
+          className="gap-1 flex-col h-full rounded-none data-[state=active]:bg-stone-900 data-[state=active]:text-amber-500 text-stone-500 hover:text-stone-300 transition-colors uppercase tracking-widest text-[10px]"
+        >
+          <Pencil className="w-5 h-5" />
+          <span>Editor</span>
         </TabsTrigger>
         <TabsTrigger
           value="upload"

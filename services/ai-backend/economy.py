@@ -3,7 +3,7 @@ import json
 import time
 from datetime import datetime, timedelta
 
-DATA_DIR = os.getenv("DATA_DIR", "data")
+DATA_DIR = os.getenv("DATA_DIR", "data") # Trigger Reload
 ECONOMY_DB_PATH = os.path.join(DATA_DIR, "economy_db.json")
 
 # Pricing Constants (Derived from $0.50 daily cap = 100 Obols)
@@ -74,6 +74,27 @@ class EconomySystem:
         else:
             print(f"🚫 {user_id} insufficient funds for {reason}. Cost: {amount}, Has: {user_data['balance']}")
             return False
+
+    def award_reward(self, user_id: str, amount: float, event_id: str = None) -> bool:
+        """
+        Awards funds to the user.
+        If event_id is provided, ensures this reward is only given once per event_id.
+        Returns True if awarded, False if already claimed.
+        """
+        user_data = self.get_user_state(user_id)
+        
+        if event_id:
+            completed_events = user_data.get("completed_events", [])
+            if event_id in completed_events:
+                return False
+            
+            completed_events.append(event_id)
+            user_data["completed_events"] = completed_events
+            
+        user_data["balance"] += amount
+        print(f"💰 {user_id} rewarded {amount:.2f} Lepta. New Balance: {user_data['balance']:.2f}")
+        self._save_db()
+        return True
 
     def estimate_cost(self, input_chars: int, output_chars: int) -> float:
         # Crude token estimation: 1 token ~= 4 chars

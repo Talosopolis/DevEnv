@@ -70,6 +70,25 @@ export const MOCK_LESSON_PLANS: LessonPlan[] = [
         teacherName: "Mrs. Rodriguez",
         createdAt: "2025-10-22",
         isPublic: true
+    },
+    {
+        id: "calculus-101",
+        title: "The Idiot's Guide to Calculus: Demystifying the Arcane",
+        subject: "Mathematics",
+        grade: "12th Grade",
+        description: "A friendly introduction to limits, derivatives, and integrals.",
+        objectives: ["Understand rate of change", "Grasp the concept of limits"],
+        materials: ["Graphing Calculator", "Notebook"],
+        activities: ["Video Lecture", "Traffic Control Protocol"],
+        duration: "90 minutes",
+        teacherName: "Prof. Newton",
+        createdAt: "2025-10-25",
+        isPublic: true,
+        quiz: {
+            question: "Which concept describes the instantaneous rate of change of a function?",
+            options: ["Integration", "Differentiation", "Summation", "Factorization"],
+            correctIndex: 1
+        }
     }
 ];
 
@@ -163,6 +182,6 @@ Key Themes:
         createdAt: "2025-10-19",
         isPublic: false,
         password: "history2025",
-        lessonPlanId: "3"
+        lessonPlanId: "2"
     }
 ];

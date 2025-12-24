@@ -51,14 +51,38 @@ export function WizardStepConfig({ onGenerate, onBack }: WizardStepConfigProps) 
                                 {moduleCount[0]} MODULES
                             </Badge>
                         </div>
-                        <Slider
-                            value={moduleCount}
-                            onValueChange={setModuleCount}
-                            min={4}
-                            max={20}
-                            step={1}
-                            className="py-4"
-                        />
+                        <div className="flex items-center justify-center gap-6 py-4">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                    const newVal = Math.max(4, moduleCount[0] - 1);
+                                    setModuleCount([newVal]);
+                                }}
+                                disabled={moduleCount[0] <= 4}
+                                className="w-12 h-12 rounded-full border-stone-700 bg-stone-800 hover:bg-stone-700 text-stone-200"
+                            >
+                                <span className="text-xl font-bold">-</span>
+                            </Button>
+
+                            <div className="flex flex-col items-center justify-center w-32">
+                                <span className="text-4xl font-bold text-amber-500 font-mono">{moduleCount[0]}</span>
+                                <span className="text-[10px] text-stone-500 font-bold uppercase tracking-widest">Modules</span>
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => {
+                                    const newVal = Math.min(20, moduleCount[0] + 1);
+                                    setModuleCount([newVal]);
+                                }}
+                                disabled={moduleCount[0] >= 20}
+                                className="w-12 h-12 rounded-full border-stone-700 bg-stone-800 hover:bg-stone-700 text-stone-200"
+                            >
+                                <span className="text-xl font-bold">+</span>
+                            </Button>
+                        </div>
                         <p className="text-[10px] text-stone-500 font-mono flex justify-between">
                             <span>MIN: 4 MODULES (1 MONTH)</span>
                             <span>MAX: 20 MODULES (5 MONTHS)</span>
