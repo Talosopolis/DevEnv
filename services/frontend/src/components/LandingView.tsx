@@ -198,14 +198,15 @@ export function LandingView({
                             </Button>
                         </div>
 
-                        <div className="flex justify-center -mt-4 mb-8 relative z-50">
+                        {/* Guest Access Removed per User Request */}
+                        {/* <div className="flex justify-center -mt-4 mb-8 relative z-50">
                             <button
                                 onClick={onGuestAccess}
                                 className="text-stone-500 hover:text-amber-500 text-xs uppercase tracking-[0.3em] transition-colors border-b border-transparent hover:border-amber-500 pb-1"
                             >
                                 [ Initiate ]
                             </button>
-                        </div>
+                        </div> */}
                         <p className="text-xs text-stone-700 uppercase tracking-[0.5em]">Auth Required // No Lurkers</p>
                     </section>
 

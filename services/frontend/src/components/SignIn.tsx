@@ -62,13 +62,9 @@ export function SignIn({ onBack, onSuccess, initialMode = 'signin' }: { onBack: 
                             {mode === 'signin' ? 'ENTER CREDENTIALS' : 'DECLARE INTENT'}
                         </p>
 
-                        {isConfigured ? (
+                        {isConfigured && (
                             <div className="flex items-center justify-center gap-1 mt-4 text-[10px] text-stone-600 uppercase tracking-widest">
                                 <Info className="w-3 h-3" /> Secure Connection
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center gap-1 mt-4 text-[10px] text-amber-500/50 uppercase tracking-widest border border-amber-900/30 px-2 py-1 inline-flex">
-                                <Info className="w-3 h-3" /> Simulation Mode
                             </div>
                         )}
                     </div>
@@ -174,21 +170,10 @@ export function SignIn({ onBack, onSuccess, initialMode = 'signin' }: { onBack: 
                         {error && (
                             <div className="mt-4 text-red-500 text-xs text-center border border-red-900/30 bg-red-950/20 p-2 uppercase tracking-wide">
                                 <p className="mb-2">{error}</p>
-                                <button
-                                    onClick={() => { bypassAuth(); onSuccess(); }}
-                                    className="w-full bg-red-900/40 hover:bg-red-800/40 text-red-200 text-[10px] py-2 px-2 border border-red-500/30 uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <Hexagon className="w-3 h-3" />
-                                    Force Simulation Mode
-                                </button>
                             </div>
                         )}
 
-                        <div className="mt-4 p-2 border border-amber-900/30 text-[10px] text-stone-600 font-mono text-center">
-                            <p>DEBUG: Current Origin</p>
-                            <p className="text-amber-500">{window.location.origin}</p>
-                            <p className="mt-1">Ensure this URL is in Firebase Authorized Domains</p>
-                        </div>
+
                     </div>
                 </div>
 
