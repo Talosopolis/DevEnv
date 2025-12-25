@@ -19,7 +19,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        let mounted = true;
+        const safetyTimeout = setTimeout(() => {
+            if (mounted && isLoading) {
+                console.warn("AuthContext: Safety timeout reached. Forcing UI to load.");
+                setIsLoading(false);
+            }
+        }, 5000); // 5s timeout
+
         const unsubscribe = db.subscribeToAuth((authUser) => {
+            if (!mounted) return;
+            clearTimeout(safetyTimeout);
             setUser(authUser);
             setIsLoading(false);
             if (authUser) {
@@ -28,7 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem('auth_user_cache');
             }
         });
-        return () => unsubscribe();
+        return () => {
+            mounted = false;
+            clearTimeout(safetyTimeout);
+            unsubscribe();
+        };
     }, []);
 
     const signIn = async (email?: string) => {
